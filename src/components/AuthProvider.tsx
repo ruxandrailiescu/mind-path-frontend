@@ -9,10 +9,12 @@ import { StudentCreation, UserProfile, UserSession } from "../types";
 import { authService } from "../api/auth";
 import { useLocation, useNavigate } from "react-router-dom";
 import { userService } from "../api/user";
+import { formatApiError } from "../utils/validationUtils";
 
 type AuthContext = {
   authToken?: string | null;
   currentUser?: UserProfile | null;
+  authError?: string | null;
   handleLogin: (credentials: UserSession) => Promise<void>;
   handleLogout: () => void;
   handleRegister: (userData: StudentCreation) => Promise<void>;
@@ -25,6 +27,7 @@ type AuthProviderProps = PropsWithChildren;
 
 export default function AuthProvider({ children }: AuthProviderProps) {
   const [authToken, setAuthToken] = useState<string | null>();
+  const [authError, setAuthError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>();
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -68,6 +71,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   async function handleLogin(credentials: UserSession) {
     setIsLoading(true);
+    setAuthError(null);
+
     try {
       const response = await authService.login(credentials);
       localStorage.setItem("token", response.token);
@@ -86,7 +91,9 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       setAuthToken(null);
       setCurrentUser(null);
-      console.error("Login failed", error);
+      const errorMessage = formatApiError(error);
+      setAuthError(errorMessage);
+      console.error(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);
@@ -103,14 +110,11 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   async function handleRegister(userData: StudentCreation) {
     setIsLoading(true);
     try {
-      console.log("Starting registration process for:", userData.email);
       await authService.register(userData);
-      console.log("Registration successful, attempting login");
       await handleLogin({
         email: userData.email,
         password: userData.password,
       });
-      console.log("Login successful after registration");
     } catch (error) {
       console.error("Registration failed", error);
       throw error;
@@ -128,6 +132,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         handleLogout,
         handleRegister,
         isLoading,
+        authError,
       }}
     >
       {children}

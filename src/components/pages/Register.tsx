@@ -30,10 +30,9 @@ const Register: React.FC = () => {
 
     try {
       await handleRegister(formData);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Registration failed. Please try again.");
+//      setError(err.message || "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
