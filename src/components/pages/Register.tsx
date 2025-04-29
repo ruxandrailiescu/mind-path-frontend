@@ -1,10 +1,14 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../AuthProvider";
 import { StudentCreation } from "../../types";
+import {
+  formatApiError,
+  validateRegisterForm,
+} from "../../utils/validationUtils";
 
 const Register: React.FC = () => {
-  const { handleRegister } = useAuth();
+  const { handleRegister, authError } = useAuth();
   const [formData, setFormData] = useState<StudentCreation>({
     email: "",
     password: "",
@@ -12,31 +16,86 @@ const Register: React.FC = () => {
     lastName: "",
     userType: "STUDENT",
   });
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (authError) {
+      setGeneralError(authError);
+    }
+  }, [authError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }));
+    }
+
+    if (generalError) {
+      setGeneralError(null);
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name } = e.target;
+
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true,
+    }));
+
+    const result = validateRegisterForm(formData);
+    if (!result.isValid && result.errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: result.errors[name],
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
+
+    setErrors({});
+    setGeneralError(null);
+
+    const validationResult = validateRegisterForm(formData);
+    if (!validationResult.isValid) {
+      setErrors(validationResult.errors);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       await handleRegister(formData);
     } catch (err) {
-      console.error(err);
-//      setError(err.message || "Registration failed. Please try again.");
+      const errorMessage = formatApiError(err);
+      console.error(errorMessage);
+      setGeneralError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const showError = (field: keyof StudentCreation) =>
+    touched[field] && errors[field];
 
   return (
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
@@ -47,9 +106,9 @@ const Register: React.FC = () => {
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        {error && (
+        {generalError && (
           <div className="mb-4 bg-red-50 border border-red-200 text-sm text-red-600 rounded-md p-4">
-            {error}
+            {generalError}
           </div>
         )}
 
@@ -70,8 +129,16 @@ const Register: React.FC = () => {
                   required
                   value={formData.firstName}
                   onChange={handleChange}
-                  className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  onBlur={handleBlur}
+                  className={`block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ${
+                    showError("firstName") ? "ring-red-500" : "ring-gray-300"
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6`}
                 />
+                {showError("firstName") && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.firstName}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -90,8 +157,14 @@ const Register: React.FC = () => {
                   required
                   value={formData.lastName}
                   onChange={handleChange}
-                  className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  onBlur={handleBlur}
+                  className={`block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ${
+                    showError("firstName") ? "ring-red-500" : "ring-gray-300"
+                  } placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6`}
                 />
+                {showError("lastName") && (
+                  <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
+                )}
               </div>
             </div>
           </div>
@@ -112,8 +185,14 @@ const Register: React.FC = () => {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                onBlur={handleBlur}
+                className={`block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ${
+                  showError("email") ? "ring-red-500" : "ring-gray-300"
+                } placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6`}
               />
+              {showError("email") && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
             </div>
           </div>
 
@@ -133,8 +212,14 @@ const Register: React.FC = () => {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                onBlur={handleBlur}
+                className={`block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ${
+                  showError("password") ? "ring-red-500" : "ring-gray-300"
+                } placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6`}
               />
+              {showError("password") && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
             </div>
           </div>
 

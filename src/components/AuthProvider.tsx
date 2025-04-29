@@ -109,6 +109,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   async function handleRegister(userData: StudentCreation) {
     setIsLoading(true);
+    
     try {
       await authService.register(userData);
       await handleLogin({
@@ -116,7 +117,9 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         password: userData.password,
       });
     } catch (error) {
-      console.error("Registration failed", error);
+      const errorMessage = formatApiError(error);
+      setAuthError(errorMessage);
+      console.error(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);
