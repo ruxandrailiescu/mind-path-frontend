@@ -4,7 +4,7 @@ import { UserSession } from "../../types";
 import { useAuth } from "../AuthProvider";
 import { formatApiError, validateLoginForm } from "../../utils/validationUtils";
 
-const Login: React.FC = () => {
+const Login = () => {
   const { handleLogin, authError } = useAuth();
   const [credentials, setCredentials] = useState<UserSession>({
     email: "",

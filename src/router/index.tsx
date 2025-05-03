@@ -6,6 +6,9 @@ import Register from "../components/pages/Register";
 import TeacherDashboard from "../components/pages/TeacherDashboard";
 import StudentDashboard from "../components/pages/StudentDashboard";
 import ProtectedRoute from "../components/ProtectedRoute";
+import CreateQuiz from "../components/pages/CreateQuiz";
+import EditQuiz from "../components/pages/EditQuiz";
+import ViewQuiz from "../components/pages/ViewQuiz";
 
 const router = createBrowserRouter([
   {
@@ -22,6 +25,30 @@ const router = createBrowserRouter([
             element: (
               <ProtectedRoute allowedRoles={["TEACHER"]}>
                 <TeacherDashboard />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "teacher/create-quiz",
+            element: (
+              <ProtectedRoute allowedRoles={["TEACHER"]}>
+                <CreateQuiz />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "teacher/edit-quiz/:id",
+            element: (
+              <ProtectedRoute allowedRoles={["TEACHER"]}>
+                <EditQuiz />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/quizzes/:id",
+            element: (
+              <ProtectedRoute allowedRoles={["STUDENT", "TEACHER"]}>
+                <ViewQuiz />
               </ProtectedRoute>
             ),
           },

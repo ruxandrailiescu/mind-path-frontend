@@ -5,8 +5,15 @@ export const questionService = {
   addQuestionToQuiz: async (
     quizId: number,
     questionData: QuestionCreation
-  ): Promise<void> => {
-    await apiClient.post(`/quizzes/${quizId}/questions`, questionData);
+  ): Promise<number> => {
+    const response = await apiClient.post(
+      `/quizzes/${quizId}/questions`,
+      questionData
+    );
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error("Question creation failed. No ID returned from server");
   },
   getQuizQuestions: async (quizId: number): Promise<QuestionSummary[]> => {
     const response = await apiClient.get(`/quizzes/${quizId}/questions`);

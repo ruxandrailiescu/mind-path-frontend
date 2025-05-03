@@ -2,9 +2,12 @@ import { QuizCreation, QuizSummary, QuizUpdate } from "../types";
 import apiClient from "./apiClient";
 
 export const quizService = {
-  createQuiz: async (quizData: QuizCreation): Promise<string> => {
+  createQuiz: async (quizData: QuizCreation): Promise<number> => {
     const response = await apiClient.post("/quizzes", quizData);
-    return response.data;
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error("Quiz creation failed. No ID returned from server");
   },
   getAllQuizzes: async (): Promise<QuizSummary[]> => {
     const response = await apiClient.get("/quizzes");

@@ -7,7 +7,7 @@ import {
   validateRegisterForm,
 } from "../../utils/validationUtils";
 
-const Register: React.FC = () => {
+const Register = () => {
   const { handleRegister, authError } = useAuth();
   const [formData, setFormData] = useState<StudentCreation>({
     email: "",
