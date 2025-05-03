@@ -37,7 +37,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "teacher/edit-quiz/:id",
+            path: "teacher/edit-quiz/:quizId",
             element: (
               <ProtectedRoute allowedRoles={["TEACHER"]}>
                 <EditQuiz />
@@ -45,7 +45,7 @@ const router = createBrowserRouter([
             ),
           },
           {
-            path: "/quizzes/:id",
+            path: "quizzes/:id",
             element: (
               <ProtectedRoute allowedRoles={["STUDENT", "TEACHER"]}>
                 <ViewQuiz />
