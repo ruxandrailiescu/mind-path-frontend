@@ -47,8 +47,6 @@ const TeacherDashboard = () => {
     }
   };
 
-  // Calculate completion data - this would ideally come from the API
-  // For now, we're just using a placeholder calculation
   const getCompletionsCount = () => {
     return 0;
   };
@@ -242,6 +240,12 @@ const TeacherDashboard = () => {
                               className="text-indigo-600 hover:text-indigo-900 mr-4"
                             >
                               Edit
+                            </Link>
+                            <Link
+                              to={`/teacher/create-session/${quiz.id}`}
+                              className="text-green-600 hover:text-green-900 mr-4"
+                            >
+                              Create Session
                             </Link>
                             <button
                               className="text-red-600 hover:text-red-900"

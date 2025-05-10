@@ -14,7 +14,7 @@ export const answerService = {
   },
   updateAnswer: async (
     answerId: number,
-    answerData: AnswerCreation
+    answerData: Partial<AnswerCreation>
   ): Promise<void> => {
     await apiClient.patch(`/answers/${answerId}`, answerData);
   },

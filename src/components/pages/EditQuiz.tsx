@@ -4,6 +4,7 @@ import {
   ErrorMessage,
   QuizInfoForm,
   QuestionsList,
+  AddQuestionForm
 } from "../QuizFormComponents";
 
 const EditQuiz = () => {
@@ -21,6 +22,14 @@ const EditQuiz = () => {
     handleEditQuestion,
     handleEditAnswer,
     navigate,
+    currentQuestion,
+    setCurrentQuestion,
+    currentAnswer,
+    setCurrentAnswer,
+    handleAddQuestion,
+    handleAddAnswer,
+    handleRemoveAnswer,
+    handleRemoveQuestion
   } = useQuizForm(true); // true indicates edit mode
 
   return (
@@ -53,10 +62,24 @@ const EditQuiz = () => {
               questions={questions}
               onEditQuestion={handleEditQuestion}
               onEditAnswer={handleEditAnswer}
+              onRemoveQuestion={handleRemoveQuestion}
               readOnly={false}
             />
 
-            <div className="flex justify-end">
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold mb-4">Add New Question</h2>
+              <AddQuestionForm
+                currentQuestion={currentQuestion}
+                setCurrentQuestion={setCurrentQuestion}
+                currentAnswer={currentAnswer}
+                setCurrentAnswer={setCurrentAnswer}
+                handleAddAnswer={handleAddAnswer}
+                handleRemoveAnswer={handleRemoveAnswer}
+                handleAddQuestion={handleAddQuestion}
+              />
+            </div>
+
+            <div className="flex justify-end mt-8">
               <button
                 onClick={handleUpdateQuiz}
                 disabled={isSaving}

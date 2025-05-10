@@ -137,6 +137,7 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
   );
   const [editingAnswerId, setEditingAnswerId] = useState<number | null>(null);
 
+  // Initialize with empty strings to prevent uncontrolled to controlled warnings
   const [editedQuestionText, setEditedQuestionText] = useState("");
   const [editedQuestionType, setEditedQuestionType] =
     useState<QuestionType>("SINGLE_CHOICE");
@@ -146,16 +147,18 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
   const [editedAnswerIsCorrect, setEditedAnswerIsCorrect] = useState(false);
 
   const startEditingQuestion = (question: QuestionState) => {
-    setEditingQuestionId(question.id);
+    // First set the values, then set the editing ID
     setEditedQuestionText(question.questionText || question.text || "");
     setEditedQuestionType(question.type);
     setEditedQuestionDifficulty(question.difficulty);
+    setEditingQuestionId(question.id);
   };
 
   const startEditingAnswer = (answer: AnswerState) => {
-    setEditingAnswerId(answer.id);
+    // First set the values, then set the editing ID
     setEditedAnswerText(answer.answerText || answer.text || "");
-    setEditedAnswerIsCorrect(answer.isCorrect);
+    setEditedAnswerIsCorrect(Boolean(answer.isCorrect)); // Ensure it's a boolean
+    setEditingAnswerId(answer.id);
   };
 
   const saveQuestionEdit = (questionId: number) => {
@@ -182,6 +185,12 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
   const cancelEdit = () => {
     setEditingQuestionId(null);
     setEditingAnswerId(null);
+    // Reset form values
+    setEditedQuestionText("");
+    setEditedQuestionType("SINGLE_CHOICE");
+    setEditedQuestionDifficulty("EASY");
+    setEditedAnswerText("");
+    setEditedAnswerIsCorrect(false);
   };
 
   if (questions.length === 0) {

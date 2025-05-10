@@ -9,6 +9,10 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import CreateQuiz from "../components/pages/CreateQuiz";
 import EditQuiz from "../components/pages/EditQuiz";
 import ViewQuiz from "../components/pages/ViewQuiz";
+import QuizAccess from "../components/pages/QuizAccess";
+import QuizAttempt from "../components/pages/QuizAttempt";
+import QuizResults from "../components/pages/QuizResults";
+import QuizSession from "../components/pages/QuizSession";
 
 const router = createBrowserRouter([
   {
@@ -45,6 +49,14 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: "teacher/create-session/:quizId",
+            element: (
+              <ProtectedRoute allowedRoles={["TEACHER"]}>
+                <QuizSession />
+              </ProtectedRoute>
+            ),
+          },
+          {
             path: "quizzes/:id",
             element: (
               <ProtectedRoute allowedRoles={["STUDENT", "TEACHER"]}>
@@ -57,6 +69,38 @@ const router = createBrowserRouter([
             element: (
               <ProtectedRoute allowedRoles={["STUDENT"]}>
                 <StudentDashboard />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "student/quiz-access/:quizId",
+            element: (
+              <ProtectedRoute allowedRoles={["STUDENT"]}>
+                <QuizAccess />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "student/quiz-attempt/:attemptId",
+            element: (
+              <ProtectedRoute allowedRoles={["STUDENT"]}>
+                <QuizAttempt />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "student/quiz-results/:attemptId",
+            element: (
+              <ProtectedRoute allowedRoles={["STUDENT"]}>
+                <QuizResults />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "student/quiz-session/:sessionId",
+            element: (
+              <ProtectedRoute allowedRoles={["STUDENT"]}>
+                <QuizSession />
               </ProtectedRoute>
             ),
           },

@@ -192,12 +192,68 @@ export const useQuizForm = (isEditMode = false) => {
     }));
   };
 
-  const handleAddQuestion = () => {
+  const handleAddQuestion = async () => {
     setError(null);
     if (!validateCurrentQuestion()) return;
 
-    setQuestions((prev) => [...prev, { ...currentQuestion }]);
+    // For editing mode, add the question to the database
+    if (isEditMode && numericQuizId !== undefined) {
+      setIsSaving(true);
+      try {
+        const questionData: QuestionCreation = {
+          questionText: currentQuestion.questionText,
+          type: currentQuestion.type,
+          difficulty: currentQuestion.difficulty,
+        };
 
+        // Add question to quiz in the backend
+        const questionId = await questionService.addQuestionToQuiz(
+          numericQuizId,
+          questionData
+        );
+
+        // Add all the answers for this question
+        for (const answer of currentQuestion.answers) {
+          const answerData: AnswerCreation = {
+            answerText: answer.answerText,
+            isCorrect: answer.isCorrect,
+          };
+
+          await answerService.addAnswerToQuestion(questionId, answerData);
+        }
+
+        // Refresh the questions list to include the new question from the server
+        const updatedQuestions = await questionService.getQuizQuestions(numericQuizId);
+        
+        // Transform the questions to match our local state format
+        const transformedQuestions = updatedQuestions.map((q: QuestionSummary) => ({
+          id: q.id,
+          questionText: q.text,
+          text: q.text,
+          type: q.type,
+          difficulty: q.difficulty,
+          answers: q.answers?.map((a: AnswerSummary) => ({
+            id: a.id,
+            answerText: a.text,
+            text: a.text,
+            isCorrect: a.isCorrect,
+          })) || [],
+        }));
+
+        setQuestions(transformedQuestions);
+      } catch (err) {
+        const errorMessage = formatApiError(err);
+        console.error(errorMessage);
+        setError(errorMessage);
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      // For creating mode, just add to local state
+      setQuestions((prev) => [...prev, { ...currentQuestion }]);
+    }
+
+    // Reset the current question form
     setCurrentQuestion({
       id: generateId(),
       questionText: "",
@@ -207,8 +263,28 @@ export const useQuizForm = (isEditMode = false) => {
     });
   };
 
-  const handleRemoveQuestion = (questionId: number) => {
-    setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+  const handleRemoveQuestion = async (questionId: number) => {
+    // First check if this is a question from the database (not a temp ID)
+    const questionExists = questions.find(q => q.id === questionId);
+    
+    if (isEditMode && questionExists && !isNaN(questionId)) {
+      setIsSaving(true);
+      try {
+        // Delete the question in the backend
+        await questionService.deleteQuestion(questionId);
+        // Remove it from local state
+        setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+      } catch (err) {
+        const errorMessage = formatApiError(err);
+        console.error(errorMessage);
+        setError(errorMessage);
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      // Just remove from local state
+      setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+    }
   };
 
   const handleUpdateQuiz = async () => {
@@ -428,11 +504,18 @@ export const useQuizForm = (isEditMode = false) => {
     setError(null);
 
     try {
-      const answerUpdateData: AnswerCreation = {
-        answerText: answerData.answerText || "",
-        isCorrect:
-          answerData.isCorrect !== undefined ? answerData.isCorrect : false,
-      };
+      // Only include fields that are actually provided in the update
+      const answerUpdateData: Partial<AnswerCreation> = {};
+      
+      // Only add answerText if it's being changed
+      if (answerData.answerText !== undefined) {
+        answerUpdateData.answerText = answerData.answerText;
+      }
+      
+      // Only add isCorrect if it's being changed
+      if (answerData.isCorrect !== undefined) {
+        answerUpdateData.isCorrect = answerData.isCorrect;
+      }
 
       await answerService.updateAnswer(answerId, answerUpdateData);
 
