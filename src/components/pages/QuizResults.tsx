@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { CheckCircle, XCircle, Clock, Award } from "lucide-react";
 import { quizSessionService, AttemptResult } from "../../api/quizSession";
+import { AxiosError } from "axios";
+import { formatApiError } from "../../utils/validationUtils";
 
-const QuizResults: React.FC = () => {
+const QuizResults = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
+  const navigate = useNavigate();
 
   const [resultData, setResultData] = useState<AttemptResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -14,30 +17,63 @@ const QuizResults: React.FC = () => {
     const fetchResults = async () => {
       try {
         setIsLoading(true);
-        if (!attemptId) return;
+        setError(null);
+        
+        if (!attemptId) {
+          setError("Invalid attempt ID");
+          setIsLoading(false);
+          return;
+        }
         
         const response = await quizSessionService.getResults(Number(attemptId));
         setResultData(response);
-      } catch (err) {
-        setError("Failed to load quiz results");
-        console.error(err);
+      } catch (err: unknown) {
+        // Handle the case where results are not available yet
+        const axiosError = err as AxiosError<{ message: string }>;
+        
+        if (axiosError.response && axiosError.response.status === 400 && 
+            axiosError.response.data && 'message' in axiosError.response.data && 
+            typeof axiosError.response.data.message === 'string' &&
+            axiosError.response.data.message.includes("must be submitted first")) {
+          setError("This quiz hasn't been submitted yet or is still being graded.");
+          
+          // Redirect to the attempt page if it's still in progress
+          setTimeout(() => {
+            navigate(`/student/quiz-attempt/${attemptId}`);
+          }, 3000);
+        } else {
+          setError("Failed to load quiz results. Please try again later.");
+        }
+        const errorMessage = formatApiError(err);
+        console.error(errorMessage);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchResults();
-  }, [attemptId]);
+  }, [attemptId, navigate]);
 
   if (isLoading) {
     return <div className="text-center py-8">Loading results...</div>;
   }
 
-  if (error || !resultData) {
+  if (error) {
+    const errorMessage = formatApiError(error);
     return (
       <div className="container mx-auto p-4">
         <div className="bg-red-50 p-4 rounded-md text-red-600">
-          {error || "Failed to load results"}
+          {errorMessage}
+        </div>
+      </div>
+    );
+  }
+
+  if (!resultData) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="bg-yellow-50 p-4 rounded-md text-yellow-600">
+          No results available. Your quiz might still be processing.
         </div>
       </div>
     );
@@ -63,7 +99,7 @@ const QuizResults: React.FC = () => {
               <h3 className="text-lg font-medium">Score</h3>
             </div>
             <p className="text-3xl font-bold text-indigo-600">
-              {resultData.score}%
+              {resultData.score.toFixed(1)}%
             </p>
           </div>
 

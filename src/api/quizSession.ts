@@ -19,6 +19,7 @@ export interface SubmitResponseRequest {
   questionId: number;
   answerId: number;
   responseTime: number;
+  isMultipleChoice?: boolean;
 }
 
 export interface SubmitAttemptRequest {
@@ -42,13 +43,13 @@ export interface AttemptResponse {
   attemptId: number;
   quizId: number;
   quizTitle: string;
-  status: string;
+  status: string | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED' | 'ABANDONED';
   score: number | null;
   attemptTime: number | null;
   startedAt: string;
   completedAt: string | null;
   questions: Question[];
-  responses?: Array<{questionId: number, answerId: number}>;
+  responses?: Array<{questionId: number, answerId: number, isMultipleChoice?: boolean}>;
 }
 
 export interface UserResponse {
@@ -56,6 +57,7 @@ export interface UserResponse {
   questionId: number;
   answerId: number;
   isCorrect: boolean;
+  isMultipleChoice?: boolean;
 }
 
 export interface AttemptResult {
@@ -119,9 +121,25 @@ export const quizSessionService = {
   },
 
   /**
+   * Get all in-progress attempts for the current user
+   */
+  getInProgressAttempts: async (): Promise<AttemptResponse[]> => {
+    const response = await apiClient.get('/attempts/in-progress');
+    return response.data;
+  },
+
+  /**
+   * Save the current progress of an attempt (without submitting)
+   */
+  saveProgress: async (attemptId: number): Promise<AttemptResponse> => {
+    const response = await apiClient.post(`/attempts/${attemptId}/save-progress`);
+    return response.data;
+  },
+
+  /**
    * Submit a response to a question
    */
-  submitResponse: async (attemptId: number, request: SubmitResponseRequest): Promise<UserResponse> => {
+  submitAnswer: async (attemptId: number, request: SubmitResponseRequest): Promise<UserResponse> => {
     const response = await apiClient.post(`/attempts/${attemptId}/responses`, request);
     return response.data;
   },

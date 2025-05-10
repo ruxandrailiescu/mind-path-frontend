@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { quizService } from "../../api/quiz";
 import { quizSessionService, QuizSessionResponse } from "../../api/quizSession";
@@ -59,10 +59,11 @@ const QuizSession = () => {
   };
 
   if (error) {
+    const errorMessage = formatApiError(error);
     return (
       <div className="container mx-auto p-4">
         <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
-          {error}
+          {errorMessage}
         </div>
         <button
           onClick={() => navigate(-1)}

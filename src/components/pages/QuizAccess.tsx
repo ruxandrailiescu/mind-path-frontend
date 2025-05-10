@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Scanner, IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { quizSessionService } from "../../api/quizSession";
 import { formatApiError } from "../../utils/validationUtils";
 
-const QuizAccess: React.FC = () => {
+const QuizAccess = () => {
   const { quizId } = useParams<{ quizId: string }>();
   const navigate = useNavigate();
 
@@ -53,6 +53,7 @@ const QuizAccess: React.FC = () => {
       navigate(`/student/quiz-attempt/${response.attemptId}`);
     } catch (err) {
       const errorMessage = formatApiError(err);
+      console.error(errorMessage);
       setError(
         errorMessage || "Failed to start quiz. Please check your access code."
       );

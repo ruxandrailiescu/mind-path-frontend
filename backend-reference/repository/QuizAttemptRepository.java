@@ -14,4 +14,11 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
     List<QuizAttempt> findByUserUserIdAndQuizQuizId(Long userId, Long quizId);
     Optional<QuizAttempt> findByAttemptIdAndUserUserId(Long attemptId, Long userId);
     List<QuizAttempt> findByUserUserIdAndStatus(Long userId, AttemptStatus status);
+    
+    /**
+     * Find all quiz attempts with the given status
+     * @param status the status to search for
+     * @return a list of quiz attempts with the matching status
+     */
+    List<QuizAttempt> findByStatus(AttemptStatus status);
 }
