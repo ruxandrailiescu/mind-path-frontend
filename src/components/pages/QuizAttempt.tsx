@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { quizSessionService, AttemptResponse, SubmitResponseRequest } from "../../api/quizSession";
+import { quizSessionService, AttemptResponse } from "../../api/quizSession";
 import { formatApiError } from "../../utils/validationUtils";
 
 const QuizAttempt = () => {
@@ -16,15 +16,18 @@ const QuizAttempt = () => {
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [startTime] = useState<Date>(new Date());
+  const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
+  const [questionDurations, setQuestionDurations] = useState<
+    Record<number, number>
+  >({});
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  // Timer state
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [responseSubmissionErrors, setResponseSubmissionErrors] = useState<Record<number, string | undefined>>({});
+  const [responseSubmissionErrors, setResponseSubmissionErrors] = useState<
+    Record<number, string | undefined>
+  >({});
 
   useEffect(() => {
-    // Set up timer
     const timer = setInterval(() => {
       setElapsedTime((prev) => prev + 1);
     }, 1000);
@@ -32,17 +35,44 @@ const QuizAttempt = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Function to determine which question to show when resuming
-  const determineResumeQuestionIndex = (attempt: AttemptResponse, selectedAnswers: Record<number, number[]>): number => {
-    // If there are no answers yet, start from the beginning
+  useEffect(() => {
+    if (
+      attemptData &&
+      attemptData.questions &&
+      attemptData.questions.length > 0
+    ) {
+      const currentQuestion = attemptData.questions[currentQuestionIndex];
+      if (currentQuestion) {
+        setQuestionStartTime(new Date());
+      }
+    }
+  }, [currentQuestionIndex, attemptData]);
+
+  const recordTimeForCurrentQuestion = () => {
+    if (!attemptData) return;
+    const question = attemptData.questions[currentQuestionIndex];
+    if (!questionStartTime) return;
+
+    const duration = Math.round(
+      (new Date().getTime() - questionStartTime.getTime()) / 1000
+    );
+
+    setQuestionDurations((prev) => ({
+      ...prev,
+      [question.id]: (prev[question.id] || 0) + duration,
+    }));
+  };
+
+  const determineResumeQuestionIndex = (
+    attempt: AttemptResponse,
+    selectedAnswers: Record<number, number[]>
+  ): number => {
     if (Object.keys(selectedAnswers).length === 0) {
       return 0;
     }
-    
-    // Get all question IDs in order
-    const questionIds = attempt.questions.map(q => q.id);
-    
-    // Find the last answered question index
+
+    const questionIds = attempt.questions.map((q) => q.id);
+
     let lastAnsweredIndex = -1;
     for (let i = questionIds.length - 1; i >= 0; i--) {
       if (questionIds[i] in selectedAnswers) {
@@ -50,19 +80,20 @@ const QuizAttempt = () => {
         break;
       }
     }
-    
-    // If we found a last answered question, go to the next unanswered one
+
     if (lastAnsweredIndex >= 0 && lastAnsweredIndex < questionIds.length - 1) {
       return lastAnsweredIndex + 1;
     }
-    
-    // If all questions are answered or no questions are answered, start from beginning
+
     return 0;
   };
 
-  // Function to check if the session is expired based on the attempt status
   const checkAttemptStatus = (attempt: AttemptResponse): boolean => {
-    return attempt.status === 'ABANDONED' || attempt.status === 'SUBMITTED' || attempt.status === 'GRADED';
+    return (
+      attempt.status === "ABANDONED" ||
+      attempt.status === "SUBMITTED" ||
+      attempt.status === "GRADED"
+    );
   };
 
   useEffect(() => {
@@ -70,35 +101,44 @@ const QuizAttempt = () => {
       try {
         setIsLoading(true);
         if (!attemptId) return;
-        
+
         const response = await quizSessionService.getAttempt(Number(attemptId));
         setAttemptData(response);
-        
-        // Check if the attempt status indicates the session has expired or ended
+
         if (checkAttemptStatus(response)) {
-          if (response.status === 'ABANDONED') {
+          if (response.status === "ABANDONED") {
             setSessionExpired(true);
-            setError("This quiz session has expired. You cannot continue this attempt.");
-          } else if (response.status === 'SUBMITTED' || response.status === 'GRADED') {
-            // Redirect to results page if the attempt is already submitted
+            setError(
+              "This quiz session has expired. You cannot continue this attempt."
+            );
+            return;
+          } else if (
+            response.status === "SUBMITTED" ||
+            response.status === "GRADED"
+          ) {
             navigate(`/student/quiz-results/${attemptId}`);
+            return;
           }
         }
-        
-        // Pre-populate selectedAnswers if there are already submitted responses
+
         if (response.responses) {
           const answersMap: Record<number, number[]> = {};
-          response.responses.forEach((resp: {questionId: number, answerId: number, isMultipleChoice?: boolean}) => {
-            if (!answersMap[resp.questionId]) {
-              answersMap[resp.questionId] = [];
+          response.responses.forEach(
+            (resp: { questionId: number; answerId: number }) => {
+              if (!answersMap[resp.questionId]) {
+                answersMap[resp.questionId] = [];
+              }
+              answersMap[resp.questionId].push(resp.answerId);
             }
-            answersMap[resp.questionId].push(resp.answerId);
-          });
+          );
           setSelectedAnswers(answersMap);
-          
-          // Determine where to resume from
-          const resumeIndex = determineResumeQuestionIndex(response, answersMap);
+
+          const resumeIndex = determineResumeQuestionIndex(
+            response,
+            answersMap
+          );
           setCurrentQuestionIndex(resumeIndex);
+          setQuestionStartTime(new Date());
         }
       } catch (err) {
         const errorMessage = formatApiError(err);
@@ -111,147 +151,131 @@ const QuizAttempt = () => {
 
     fetchAttemptData();
 
-    // Set up a periodic check for session expiration every 30 seconds
     const sessionCheckInterval = setInterval(async () => {
-      if (attemptId) {
-        try {
-          const response = await quizSessionService.getAttempt(Number(attemptId));
-          
-          if (checkAttemptStatus(response)) {
-            if (response.status === 'ABANDONED') {
-              setSessionExpired(true);
-              setError("This quiz session has expired. You cannot continue this attempt.");
-              clearInterval(sessionCheckInterval);
-            }
-          }
-        } catch (error) {
-          console.error("Failed to check session status:", error);
+      if (!attemptId) return;
+
+      try {
+        const response = await quizSessionService.getAttempt(Number(attemptId));
+        if (checkAttemptStatus(response) && response.status === "ABANDONED") {
+          setSessionExpired(true);
+          setError(
+            "This quiz session has expired. You cannot continue this attempt."
+          );
+          clearInterval(sessionCheckInterval);
         }
+      } catch (error) {
+        console.error("Failed to check session status:", error);
       }
-    }, 30000); // Check every 30 seconds
+    }, 30000);
 
     return () => {
       clearInterval(sessionCheckInterval);
     };
   }, [attemptId, navigate]);
 
-  const handleAnswerSelect = (questionId: number, answerId: number) => {
-    // Don't allow answer selection if session is expired
-    if (sessionExpired) {
-      return;
-    }
+  const handleAnswerSelect = async (questionId: number, answerId: number) => {
+    if (sessionExpired) return;
 
-    const currentQuestion = attemptData?.questions.find(q => q.id === questionId);
+    const currentQuestion = attemptData?.questions.find(
+      (q) => q.id === questionId
+    );
     if (!currentQuestion) return;
 
-    if (currentQuestion.type === "MULTIPLE_CHOICE") {
-      // For multiple choice, toggle the selection
-      setSelectedAnswers((prev) => {
-        const currentSelections = prev[questionId] || [];
-        let newSelections;
-        
-        if (currentSelections.includes(answerId)) {
-          // Remove if already selected
-          newSelections = currentSelections.filter(id => id !== answerId);
-        } else {
-          // Add if not already selected
-          newSelections = [...currentSelections, answerId];
-        }
-        
+    setSelectedAnswers((prev) => {
+      const currentSelections = prev[questionId] || [];
+
+      if (currentQuestion.type == "MULTIPLE_CHOICE") {
+        const newSelections = currentSelections.includes(answerId)
+          ? currentSelections.filter((id) => id !== answerId)
+          : [...currentSelections, answerId];
+
         return {
           ...prev,
-          [questionId]: newSelections
+          [questionId]: newSelections,
         };
-      });
-      
-      // Submit this toggle action
-      submitAnswer(questionId, answerId, currentQuestion.type);
-    } else {
-      // For single choice, replace the selection
-      setSelectedAnswers((prev) => ({
-        ...prev,
-        [questionId]: [answerId]
-      }));
-      
-      // Submit this answer to the backend
-      submitAnswer(questionId, answerId, "SINGLE_CHOICE");
-    }
+      } else {
+        return {
+          ...prev,
+          [questionId]: [answerId],
+        };
+      }
+    });
   };
 
-  const submitAnswer = async (questionId: number, answerId: number, questionType: string) => {
+  const submitCurrentQuestionAnswers = async () => {
+    const question = attemptData?.questions[currentQuestionIndex];
+    if (!question || !attemptId) return;
+
+    const selected = selectedAnswers[question.id] || [];
+
     try {
       setResponseSubmissionErrors((prev) => ({
         ...prev,
-        [questionId]: undefined
+        [question.id]: undefined,
       }));
-      
-      const responseTime = Math.round(
-        (new Date().getTime() - startTime.getTime()) / 1000
-      );
 
-      if (!attemptId) return;
+      const responseTime = questionDurations[question.id] || 0;
 
-      const request: SubmitResponseRequest = {
-        questionId,
-        answerId,
-        responseTime,
-        isMultipleChoice: questionType === "MULTIPLE_CHOICE"
-      };
-
-      await quizSessionService.submitAnswer(Number(attemptId), request);
+      await quizSessionService.submitAnswer(Number(attemptId), {
+        questionId: question.id,
+        selectedAnswerIds: selected,
+        responseTime: responseTime,
+        isMultipleChoice: question.type === "MULTIPLE_CHOICE",
+      });
     } catch (err) {
       const errorMessage = formatApiError(err);
       console.error(errorMessage);
-      
-      // Check if error indicates session expiration
-      if (errorMessage.includes("session has expired") || 
-          errorMessage.includes("no longer valid") ||
-          errorMessage.includes("ABANDONED")) {
-        setSessionExpired(true);
-        setError("This quiz session has expired. You cannot continue this attempt.");
-      } else {
-        setResponseSubmissionErrors((prev) => ({
-          ...prev,
-          [questionId]: "Failed to save your answer. Please try again."
-        }));
-      }
+      setResponseSubmissionErrors((prev) => ({
+        ...prev,
+        [question.id]: "Failed to save your answer. Please try again.",
+      }));
+      setError(errorMessage);
     }
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (sessionExpired) return;
-    
-    if (currentQuestionIndex < (attemptData?.questions.length || 0) - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+
+    await submitCurrentQuestionAnswers();
+
+    recordTimeForCurrentQuestion();
+
+    const nextIndex = currentQuestionIndex + 1;
+    if (nextIndex < (attemptData?.questions.length || 0)) {
+      setCurrentQuestionIndex(nextIndex);
+      setQuestionStartTime(new Date());
     }
   };
 
   const handlePreviousQuestion = () => {
     if (sessionExpired) return;
-    
+
+    recordTimeForCurrentQuestion();
+
+    const prevIndex = currentQuestionIndex - 1;
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prev) => prev - 1);
+      setCurrentQuestionIndex(prevIndex);
+      setQuestionStartTime(new Date());
     }
   };
 
   const handleSubmitQuiz = async () => {
     if (sessionExpired) {
-      navigate('/student/dashboard');
+      navigate("/student/dashboard");
       return;
     }
-    
-    // Check if all questions have been answered
-    const questionsCount = attemptData?.questions.length || 0;
-    const answeredCount = Object.keys(selectedAnswers).length;
 
-    if (answeredCount < questionsCount) {
-      if (
-        !window.confirm(
-          `You've only answered ${answeredCount} out of ${questionsCount} questions. Are you sure you want to submit?`
-        )
-      ) {
-        return;
-      }
+    await submitCurrentQuestionAnswers();
+
+    const questions = attemptData?.questions || [];
+    const totalQuestions = questions.length;
+    const answeredQuestions = Object.keys(selectedAnswers).length;
+
+    if (answeredQuestions < totalQuestions) {
+      const confirm = window.confirm(
+        `You've only answered ${answeredQuestions} out of ${totalQuestions} questions. Are you sure you want to submit?`
+      );
+      if (!confirm) return;
     }
 
     try {
@@ -264,22 +288,25 @@ const QuizAttempt = () => {
         return;
       }
 
-      // Submit any remaining answers that may not have been sent yet
-      const questionIds = attemptData?.questions.map(q => q.id) || [];
-      const submittedQuestionIds = Object.keys(selectedAnswers).map(Number);
-      
-      // Find questions that were answered but not submitted
-      const unsubmittedQuestions = questionIds.filter(
-        id => submittedQuestionIds.includes(id) && 
-        !responseSubmissionErrors[id]
-      );
-      
-      // Submit any unsubmitted answers first
-      for (const qId of unsubmittedQuestions) {
-        for (const aId of selectedAnswers[qId] || []) {
-          await submitAnswer(qId, aId, attemptData?.questions.find(q => q.id === qId)?.type || "SINGLE_CHOICE");
-          
-          // If session expired during submission, stop and return
+      recordTimeForCurrentQuestion();
+
+      for (const question of questions) {
+        const answerIds = selectedAnswers[question.id];
+
+        if (
+          answerIds &&
+          answerIds.length > 0 &&
+          !responseSubmissionErrors[question.id]
+        ) {
+          const responseTime = questionDurations[question.id] || 0;
+
+          await quizSessionService.submitAnswer(Number(attemptId), {
+            questionId: question.id,
+            selectedAnswerIds: answerIds,
+            responseTime: responseTime,
+            isMultipleChoice: question.type === "MULTIPLE_CHOICE",
+          });
+
           if (sessionExpired) {
             setIsSubmitting(false);
             return;
@@ -287,14 +314,14 @@ const QuizAttempt = () => {
         }
       }
 
-      // Submit the entire attempt with total time taken
-      const response = await quizSessionService.submitAttempt(Number(attemptId), {
-        totalTime: elapsedTime,
-      });
+      const response = await quizSessionService.submitAttempt(
+        Number(attemptId),
+        {
+          totalTime: elapsedTime,
+        }
+      );
 
-      // Check if the submission was successful by checking the status
       if (response && response.status === "SUBMITTED") {
-        // Navigate to results page
         navigate(`/student/quiz-results/${attemptId}`);
       } else {
         setError("Quiz submission failed. Please try again.");
@@ -303,25 +330,30 @@ const QuizAttempt = () => {
       const errorMessage = formatApiError(err);
       setError(errorMessage);
       console.error(errorMessage);
-      
-      // Check if error indicates session expiration
-      if (errorMessage.includes("session has expired") || 
-          errorMessage.includes("no longer valid") ||
-          errorMessage.includes("ABANDONED")) {
+
+      if (
+        errorMessage.includes("session has expired") ||
+        errorMessage.includes("no longer valid") ||
+        errorMessage.includes("ABANDONED")
+      ) {
         setSessionExpired(true);
-        setError("This quiz session has expired. Your attempt could not be submitted.");
+        setError(
+          "This quiz session has expired. Your attempt could not be submitted."
+        );
       }
-      
+
       setIsSubmitting(false);
     }
   };
 
-  // Function to handle saving progress and exiting
   const handleSaveAndExit = async () => {
     if (sessionExpired) {
-      navigate('/student/dashboard');
+      navigate("/student/dashboard");
       return;
     }
+
+    await submitCurrentQuestionAnswers();
+    recordTimeForCurrentQuestion();
 
     try {
       setIsSaving(true);
@@ -333,22 +365,25 @@ const QuizAttempt = () => {
         return;
       }
 
-      // Submit any unsaved answers first
-      const questionIds = attemptData?.questions.map(q => q.id) || [];
-      const submittedQuestionIds = Object.keys(selectedAnswers).map(Number);
-      
-      // Find questions that were answered but not submitted
-      const unsubmittedQuestions = questionIds.filter(
-        id => submittedQuestionIds.includes(id) && 
-        !responseSubmissionErrors[id]
-      );
-      
-      // Submit any unsubmitted answers first
-      for (const qId of unsubmittedQuestions) {
-        for (const aId of selectedAnswers[qId] || []) {
-          await submitAnswer(qId, aId, attemptData?.questions.find(q => q.id === qId)?.type || "SINGLE_CHOICE");
-          
-          // If session expired during submission, stop and return
+      const questions = attemptData?.questions || [];
+
+      for (const question of questions) {
+        const answerIds = selectedAnswers[question.id];
+
+        if (
+          answerIds &&
+          answerIds.length > 0 &&
+          !responseSubmissionErrors[question.id]
+        ) {
+          const responseTime = questionDurations[question.id] || 0;
+
+          await quizSessionService.submitAnswer(Number(attemptId), {
+            questionId: question.id,
+            selectedAnswerIds: answerIds,
+            responseTime: responseTime,
+            isMultipleChoice: question.type === "MULTIPLE_CHOICE",
+          });
+
           if (sessionExpired) {
             setIsSaving(false);
             return;
@@ -356,24 +391,25 @@ const QuizAttempt = () => {
         }
       }
 
-      // Save progress
       await quizSessionService.saveProgress(Number(attemptId));
-      
-      // Navigate back to dashboard
-      navigate('/student/dashboard');
+
+      navigate("/student/dashboard");
     } catch (err) {
       const errorMessage = formatApiError(err);
       setError(errorMessage);
       console.error(errorMessage);
-      
-      // Check if error indicates session expiration
-      if (errorMessage.includes("session has expired") || 
-          errorMessage.includes("no longer valid") ||
-          errorMessage.includes("ABANDONED")) {
+
+      if (
+        errorMessage.includes("session has expired") ||
+        errorMessage.includes("no longer valid") ||
+        errorMessage.includes("ABANDONED")
+      ) {
         setSessionExpired(true);
-        setError("This quiz session has expired. Your progress could not be saved.");
+        setError(
+          "This quiz session has expired. Your progress could not be saved."
+        );
       }
-      
+
       setIsSaving(false);
     }
   };
@@ -389,12 +425,12 @@ const QuizAttempt = () => {
         <div className="bg-red-50 p-4 rounded-md text-red-600 mb-4">
           {errorMessage || "Failed to load quiz"}
         </div>
-        
+
         {/* Add a return to dashboard button if session has expired */}
         {sessionExpired && (
           <div className="flex justify-center">
             <button
-              onClick={() => navigate('/student/dashboard')}
+              onClick={() => navigate("/student/dashboard")}
               className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
             >
               Return to Dashboard
@@ -405,7 +441,6 @@ const QuizAttempt = () => {
     );
   }
 
-  // If session is expired but we have attempt data, show a different message
   if (sessionExpired) {
     return (
       <div className="container mx-auto p-4">
@@ -413,12 +448,15 @@ const QuizAttempt = () => {
           <h1 className="text-2xl font-bold mb-4">{attemptData.quizTitle}</h1>
           <div className="bg-amber-50 p-4 rounded-md text-amber-600 mb-6">
             <p className="font-semibold">This quiz session has expired.</p>
-            <p>The session time has ended or the teacher has closed the session. Your progress has been saved.</p>
+            <p>
+              The session time has ended or the teacher has closed the session.
+              Your progress has been saved.
+            </p>
           </div>
-          
+
           <div className="flex justify-center">
             <button
-              onClick={() => navigate('/student/dashboard')}
+              onClick={() => navigate("/student/dashboard")}
               className="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
             >
               Return to Dashboard
@@ -492,28 +530,47 @@ const QuizAttempt = () => {
                 selectedAnswers[currentQuestion.id]?.includes(answer.id)
                   ? "border-indigo-500 bg-indigo-50"
                   : "border-gray-300 hover:border-gray-400"
-              } ${sessionExpired ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
-              onClick={() => !sessionExpired && handleAnswerSelect(currentQuestion.id, answer.id)}
+              } ${
+                sessionExpired
+                  ? "cursor-not-allowed opacity-70"
+                  : "cursor-pointer"
+              }`}
+              onClick={() =>
+                !sessionExpired &&
+                handleAnswerSelect(currentQuestion.id, answer.id)
+              }
             >
               {/* Show checkbox for multiple choice, radio button for single choice */}
               {currentQuestion.type === "MULTIPLE_CHOICE" ? (
-                <div className={`w-5 h-5 border ${
-                  selectedAnswers[currentQuestion.id]?.includes(answer.id)
-                    ? "bg-indigo-600 border-indigo-600"
-                    : "border-gray-300"
-                } rounded mr-3 flex items-center justify-center`}>
+                <div
+                  className={`w-5 h-5 border ${
+                    selectedAnswers[currentQuestion.id]?.includes(answer.id)
+                      ? "bg-indigo-600 border-indigo-600"
+                      : "border-gray-300"
+                  } rounded mr-3 flex items-center justify-center`}
+                >
                   {selectedAnswers[currentQuestion.id]?.includes(answer.id) && (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      ></path>
                     </svg>
                   )}
                 </div>
               ) : (
-                <div className={`w-5 h-5 rounded-full border ${
-                  selectedAnswers[currentQuestion.id]?.includes(answer.id)
-                    ? "bg-indigo-600 border-indigo-600"
-                    : "border-gray-300"
-                } mr-3 flex items-center justify-center`}>
+                <div
+                  className={`w-5 h-5 rounded-full border ${
+                    selectedAnswers[currentQuestion.id]?.includes(answer.id)
+                      ? "bg-indigo-600 border-indigo-600"
+                      : "border-gray-300"
+                  } mr-3 flex items-center justify-center`}
+                >
                   {selectedAnswers[currentQuestion.id]?.includes(answer.id) && (
                     <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
@@ -558,7 +615,11 @@ const QuizAttempt = () => {
               disabled={isSubmitting || sessionExpired}
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
             >
-              {isSubmitting ? "Submitting..." : sessionExpired ? "Session Expired" : "Submit Quiz"}
+              {isSubmitting
+                ? "Submitting..."
+                : sessionExpired
+                ? "Session Expired"
+                : "Submit Quiz"}
             </button>
           )}
         </div>

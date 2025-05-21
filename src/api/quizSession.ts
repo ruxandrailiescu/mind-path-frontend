@@ -17,7 +17,7 @@ export interface QuizSessionResponse {
 
 export interface SubmitResponseRequest {
   questionId: number;
-  answerId: number;
+  selectedAnswerIds: number[];
   responseTime: number;
   isMultipleChoice?: boolean;
 }
