@@ -1,18 +1,55 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, Clock, RefreshCw, PlayCircle } from "lucide-react";
+import {
+  BookOpen,
+  Clock,
+  RefreshCw,
+  PlayCircle,
+  CheckCircle,
+} from "lucide-react";
 import { quizService } from "../../api/quiz";
-import { quizSessionService, AttemptResponse } from "../../api/quizSession";
+import {
+  quizSessionService,
+  AttemptResponse,
+  AttemptResult,
+} from "../../api/quizSession";
 import { QuizSummary } from "../../types";
 import { formatApiError } from "../../utils/validationUtils";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
   const [activeQuizzes, setActiveQuizzes] = useState<QuizSummary[]>([]);
-  const [inProgressAttempts, setInProgressAttempts] = useState<AttemptResponse[]>([]);
+  const [inProgressAttempts, setInProgressAttempts] = useState<
+    AttemptResponse[]
+  >([]);
+  const [completedAttempts, setCompletedAttempts] = useState<AttemptResult[]>(
+    []
+  );
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(true);
   const [isLoadingAttempts, setIsLoadingAttempts] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 3;
+
+  const totalPages = Math.ceil(completedAttempts.length / itemsPerPage);
+  const startIndex = currentPage * itemsPerPage;
+  const currentItems = completedAttempts.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   useEffect(() => {
     const fetchActiveQuizzes = async () => {
@@ -38,8 +75,22 @@ const StudentDashboard = () => {
       } catch (err) {
         const errorMessage = formatApiError(err);
         console.error(errorMessage);
-        // Don't set an error for this, just show empty attempts
         setInProgressAttempts([]);
+      } finally {
+        setIsLoadingAttempts(false);
+      }
+    };
+
+    const fetchCompletedAttempts = async () => {
+      try {
+        setIsLoadingAttempts(true);
+        const completedAttempts =
+          await quizSessionService.getCompletedAttempts();
+        setCompletedAttempts(completedAttempts);
+      } catch (err) {
+        const errorMessage = formatApiError(err);
+        console.error(errorMessage);
+        setCompletedAttempts([]);
       } finally {
         setIsLoadingAttempts(false);
       }
@@ -47,6 +98,7 @@ const StudentDashboard = () => {
 
     fetchActiveQuizzes();
     fetchInProgressAttempts();
+    fetchCompletedAttempts();
   }, []);
 
   const handleResumeAttempt = (attemptId: number) => {
@@ -68,16 +120,25 @@ const StudentDashboard = () => {
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-4">Continue Your Progress</h1>
           <p className="text-gray-600 mb-4">
-            You have {inProgressAttempts.length} quiz attempt{inProgressAttempts.length > 1 ? 's' : ''} in progress. Continue where you left off.
+            You have {inProgressAttempts.length} quiz attempt
+            {inProgressAttempts.length > 1 ? "s" : ""} in progress. Continue
+            where you left off.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             {inProgressAttempts.map((attempt) => (
-              <div key={attempt.attemptId} className="bg-white rounded-lg shadow-md p-4 border-l-4 border-yellow-500">
-                <h2 className="text-xl font-semibold mb-2">{attempt.quizTitle}</h2>
+              <div
+                key={attempt.attemptId}
+                className="bg-white rounded-lg shadow-md p-4 border-l-4 border-yellow-500"
+              >
+                <h2 className="text-xl font-semibold mb-2">
+                  {attempt.quizTitle}
+                </h2>
                 <div className="flex items-center text-sm text-gray-500 mb-4">
                   <Clock size={16} className="mr-1" />
-                  <span>Started: {new Date(attempt.startedAt).toLocaleString()}</span>
+                  <span>
+                    Started: {new Date(attempt.startedAt).toLocaleString()}
+                  </span>
                 </div>
                 <button
                   onClick={() => handleResumeAttempt(attempt.attemptId)}
@@ -120,6 +181,68 @@ const StudentDashboard = () => {
               </Link>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Completed Quiz Attempts Section */}
+      <div className="p-4"></div>
+      
+      {completedAttempts.length > 0 && (
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Past Quiz Results</h2>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 0}
+                className="p-2 rounded-md bg-gray-200 disabled:opacity-50"
+              >
+                ←
+              </button>
+              <span className="text-sm text-gray-600">
+                {currentPage + 1} of {totalPages}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage >= totalPages - 1}
+                className="p-2 rounded-md bg-gray-200 disabled:opacity-50"
+              >
+                →
+              </button>
+            </div>
+          </div>
+
+          {/* Display current page items */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {currentItems.map((attempt) => (
+              <div
+                key={attempt.attemptId}
+                className="bg-white rounded-lg shadow-md p-4"
+              >
+                <h2 className="text-xl font-semibold mb-2">
+                  {attempt.quizTitle}
+                </h2>
+                <div className="flex items-center text-sm text-gray-500 mb-4">
+                  <BookOpen size={16} className="mr-1" />
+                  <span>{attempt.questions?.length || 0} questions</span>
+                  <span className="mx-2">•</span>
+                  <CheckCircle size={16} className="mr-1" />
+                  <span>Score: {attempt.score}</span>
+                </div>
+                <Link
+                  to={`/student/quiz-results/${attempt.attemptId}`}
+                  className="block w-full text-center bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700"
+                >
+                  <div className="flex justify-center items-center">
+                    <CheckCircle size={16} className="mr-2" />
+                    View Results
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

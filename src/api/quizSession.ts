@@ -43,13 +43,17 @@ export interface AttemptResponse {
   attemptId: number;
   quizId: number;
   quizTitle: string;
-  status: string | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED' | 'ABANDONED';
+  status: string | "IN_PROGRESS" | "SUBMITTED" | "GRADED" | "ABANDONED";
   score: number | null;
   attemptTime: number | null;
   startedAt: string;
   completedAt: string | null;
   questions: Question[];
-  responses?: Array<{questionId: number, answerId: number, isMultipleChoice?: boolean}>;
+  responses?: Array<{
+    questionId: number;
+    answerId: number;
+    isMultipleChoice?: boolean;
+  }>;
 }
 
 export interface UserResponse {
@@ -85,26 +89,24 @@ export interface AttemptResult {
 }
 
 export const quizSessionService = {
-  /**
-   * Create a new quiz session with access code
-   */
-  createSession: async (request: CreateSessionRequest): Promise<QuizSessionResponse> => {
+  createSession: async (
+    request: CreateSessionRequest
+  ): Promise<QuizSessionResponse> => {
     const response = await apiClient.post("/quiz-sessions", request);
     return response.data;
   },
 
-  /**
-   * Validate an access code
-   */
   validateAccessCode: async (accessCode: string): Promise<boolean> => {
-    const response = await apiClient.get(`/quiz-sessions/validate?accessCode=${accessCode}`);
+    const response = await apiClient.get(
+      `/quiz-sessions/validate?accessCode=${accessCode}`
+    );
     return response.data;
   },
 
-  /**
-   * Start a quiz attempt using an access code
-   */
-  startAttemptWithAccessCode: async (quizId: number, accessCode: string): Promise<{ attemptId: number }> => {
+  startAttemptWithAccessCode: async (
+    quizId: number,
+    accessCode: string
+  ): Promise<{ attemptId: number }> => {
     const response = await apiClient.post("/quizzes/attempts", {
       quizId,
       accessCode,
@@ -112,51 +114,52 @@ export const quizSessionService = {
     return response.data;
   },
 
-  /**
-   * Get attempt details
-   */
   getAttempt: async (attemptId: number): Promise<AttemptResponse> => {
     const response = await apiClient.get(`/attempts/${attemptId}`);
     return response.data;
   },
 
-  /**
-   * Get all in-progress attempts for the current user
-   */
   getInProgressAttempts: async (): Promise<AttemptResponse[]> => {
-    const response = await apiClient.get('/attempts/in-progress');
+    const response = await apiClient.get("/attempts/in-progress");
     return response.data;
   },
 
-  /**
-   * Save the current progress of an attempt (without submitting)
-   */
   saveProgress: async (attemptId: number): Promise<AttemptResponse> => {
-    const response = await apiClient.post(`/attempts/${attemptId}/save-progress`);
+    const response = await apiClient.post(
+      `/attempts/${attemptId}/save-progress`
+    );
     return response.data;
   },
 
-  /**
-   * Submit a response to a question
-   */
-  submitAnswer: async (attemptId: number, request: SubmitResponseRequest): Promise<UserResponse> => {
-    const response = await apiClient.post(`/attempts/${attemptId}/responses`, request);
+  submitAnswer: async (
+    attemptId: number,
+    request: SubmitResponseRequest
+  ): Promise<UserResponse> => {
+    const response = await apiClient.post(
+      `/attempts/${attemptId}/responses`,
+      request
+    );
     return response.data;
   },
 
-  /**
-   * Submit the entire quiz attempt
-   */
-  submitAttempt: async (attemptId: number, request: SubmitAttemptRequest): Promise<AttemptResponse> => {
-    const response = await apiClient.post(`/attempts/${attemptId}/submit`, request);
+  submitAttempt: async (
+    attemptId: number,
+    request: SubmitAttemptRequest
+  ): Promise<AttemptResponse> => {
+    const response = await apiClient.post(
+      `/attempts/${attemptId}/submit`,
+      request
+    );
     return response.data;
   },
 
-  /**
-   * Get quiz results after submission
-   */
   getResults: async (attemptId: number): Promise<AttemptResult> => {
     const response = await apiClient.get(`/attempts/${attemptId}/results`);
     return response.data;
-  }
-}; 
+  },
+
+  getCompletedAttempts: async (): Promise<AttemptResult[]> => {
+    const response = await apiClient.get("/attempts/completed");
+    return response.data;
+  },
+};
