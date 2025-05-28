@@ -18,26 +18,30 @@ const QuizResults = () => {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         if (!attemptId) {
           setError("Invalid attempt ID");
           setIsLoading(false);
           return;
         }
-        
+
         const response = await quizSessionService.getResults(Number(attemptId));
         setResultData(response);
       } catch (err: unknown) {
-        // Handle the case where results are not available yet
         const axiosError = err as AxiosError<{ message: string }>;
-        
-        if (axiosError.response && axiosError.response.status === 400 && 
-            axiosError.response.data && 'message' in axiosError.response.data && 
-            typeof axiosError.response.data.message === 'string' &&
-            axiosError.response.data.message.includes("must be submitted first")) {
-          setError("This quiz hasn't been submitted yet or is still being graded.");
-          
-          // Redirect to the attempt page if it's still in progress
+
+        if (
+          axiosError.response &&
+          axiosError.response.status === 400 &&
+          axiosError.response.data &&
+          "message" in axiosError.response.data &&
+          typeof axiosError.response.data.message === "string" &&
+          axiosError.response.data.message.includes("must be submitted first")
+        ) {
+          setError(
+            "This quiz hasn't been submitted yet or is still being graded."
+          );
+
           setTimeout(() => {
             navigate(`/student/quiz-attempt/${attemptId}`);
           }, 3000);

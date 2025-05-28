@@ -35,17 +35,11 @@ apiClient.interceptors.response.use(
     if (error.response?.data) {
       const data = error.response.data as Record<string, unknown>;
 
-      // Handle Spring Boot ProblemDetail format
       if (data.detail && typeof data.detail === "string") {
         errorResponse.message = data.detail;
-      }
-      // Handle custom ErrorResponse format
-      else if (data.message && typeof data.message === "string") {
+      } else if (data.message && typeof data.message === "string") {
         errorResponse.message = data.message;
-      }
-      // Handle validation errors (field errors)
-      else if (typeof data === "object" && !Array.isArray(data)) {
-        // This is likely a validation error with field-specific messages
+      } else if (typeof data === "object" && !Array.isArray(data)) {
         const fieldErrors = Object.values(data)
           .filter((value): value is string => typeof value === "string")
           .join(", ");
