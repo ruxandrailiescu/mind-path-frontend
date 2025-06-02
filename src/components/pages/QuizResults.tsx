@@ -13,6 +13,10 @@ const QuizResults = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const isOpenEndedQuestion = (questionType: string): boolean => {
+    return questionType === "OPEN_ENDED";
+  };
+
   useEffect(() => {
     const fetchResults = async () => {
       try {
@@ -146,37 +150,88 @@ const QuizResults = () => {
                   )}
                 </div>
 
-                <div className="space-y-2 ml-6">
-                  {question.answers.map((answer) => (
-                    <div
-                      key={answer.id}
-                      className={`p-2 rounded-md ${
-                        answer.isCorrect && answer.isSelected
-                          ? "bg-green-100 border border-green-500"
-                          : answer.isCorrect
-                          ? "bg-green-50 border border-green-300"
-                          : answer.isSelected
-                          ? "bg-red-100 border border-red-500"
-                          : "bg-gray-50 border border-gray-300"
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span>{answer.text}</span>
-                        <div>
-                          {answer.isSelected && (
-                            <span className="text-sm font-medium mr-2">
-                              Your answer
-                            </span>
-                          )}
-                          {answer.isCorrect && (
-                            <span className="text-sm font-medium text-green-600">
-                              Correct
-                            </span>
-                          )}
+                <div className="ml-6">
+                  {isOpenEndedQuestion(question.type) ? (
+                    <div className="space-y-3">
+                      <div className="bg-gray-50 border border-gray-300 rounded-md p-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="text-sm font-medium text-gray-700">
+                            Your Response:
+                          </h4>
                         </div>
+                        {question.answers
+                          .filter(
+                            (answer) => answer.isSelected && answer.id === 0
+                          )
+                          .map((textAnswer) => (
+                            <div key="text-response" className="text-gray-800">
+                              {textAnswer.text || "No response provided"}
+                            </div>
+                          ))}
+                      </div>
+
+                      {question.answers
+                        .filter((answer) => answer.isCorrect && answer.id !== 0)
+                        .map((exampleAnswer) => (
+                          <div
+                            key={exampleAnswer.id}
+                            className="bg-green-50 border border-green-300 rounded-md p-3"
+                          >
+                            <h4 className="text-sm font-medium text-green-700 mb-2">
+                              Example Response:
+                            </h4>
+                            <div className="text-green-800">
+                              {exampleAnswer.text}
+                            </div>
+                          </div>
+                        ))}
+
+                      <div
+                        className={`text-sm font-medium ${
+                          question.isCorrect
+                            ? "text-green-600"
+                            : "text-yellow-600"
+                        }`}
+                      >
+                        {question.isCorrect
+                          ? "Response evaluated as correct"
+                          : "Response pending evaluation"}
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="space-y-2">
+                      {question.answers.map((answer) => (
+                        <div
+                          key={answer.id}
+                          className={`p-2 rounded-md ${
+                            answer.isCorrect && answer.isSelected
+                              ? "bg-green-100 border border-green-500"
+                              : answer.isCorrect
+                              ? "bg-green-50 border border-green-300"
+                              : answer.isSelected
+                              ? "bg-red-100 border border-red-500"
+                              : "bg-gray-50 border border-gray-300"
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span>{answer.text}</span>
+                            <div>
+                              {answer.isSelected && (
+                                <span className="text-sm font-medium mr-2">
+                                  Your answer
+                                </span>
+                              )}
+                              {answer.isCorrect && (
+                                <span className="text-sm font-medium text-green-600">
+                                  Correct
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

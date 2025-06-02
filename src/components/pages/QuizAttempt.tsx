@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { quizSessionService, AttemptResponse } from "../../api/quizSession";
+import {
+  quizSessionService,
+  AttemptResponse,
+  Question,
+} from "../../api/quizSession";
 import { formatApiError } from "../../utils/validationUtils";
 
 const QuizAttempt = () => {
@@ -14,6 +18,9 @@ const QuizAttempt = () => {
   const [selectedAnswers, setSelectedAnswers] = useState<
     Record<number, number[]>
   >({});
+  const [textResponses, setTextResponses] = useState<Record<number, string>>(
+    {}
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
@@ -48,6 +55,20 @@ const QuizAttempt = () => {
     }
   }, [currentQuestionIndex, attemptData]);
 
+  const isOpenEndedQuestion = (question: Question): boolean => {
+    return question.type === "OPEN_ENDED";
+  };
+
+  const isQuestionAnswered = (question: Question): boolean => {
+    if (isOpenEndedQuestion(question)) {
+      const textResponse = textResponses[question.id];
+      return textResponse != null && textResponse.trim().length > 0;
+    } else {
+      const selections = selectedAnswers[question.id];
+      return selections != null && selections.length > 0;
+    }
+  };
+
   const recordTimeForCurrentQuestion = () => {
     if (!attemptData) return;
     const question = attemptData.questions[currentQuestionIndex];
@@ -65,9 +86,13 @@ const QuizAttempt = () => {
 
   const determineResumeQuestionIndex = (
     attempt: AttemptResponse,
-    selectedAnswers: Record<number, number[]>
+    selectedAnswers: Record<number, number[]>,
+    textResponses: Record<number, string>
   ): number => {
-    if (Object.keys(selectedAnswers).length === 0) {
+    if (
+      Object.keys(selectedAnswers).length === 0 &&
+      Object.keys(textResponses).length === 0
+    ) {
       return 0;
     }
 
@@ -75,7 +100,15 @@ const QuizAttempt = () => {
 
     let lastAnsweredIndex = -1;
     for (let i = questionIds.length - 1; i >= 0; i--) {
-      if (questionIds[i] in selectedAnswers) {
+      const questionId = questionIds[i];
+
+      const hasMultipleChoiceAnswer =
+        questionId in selectedAnswers && selectedAnswers[questionId].length > 0;
+      const hasTextResponse =
+        questionId in textResponses &&
+        textResponses[questionId].trim().length > 0;
+
+      if (hasMultipleChoiceAnswer || hasTextResponse) {
         lastAnsweredIndex = i;
         break;
       }
@@ -123,19 +156,32 @@ const QuizAttempt = () => {
 
         if (response.responses) {
           const answersMap: Record<number, number[]> = {};
+          const textResponsesMap: Record<number, string> = {};
+
           response.responses.forEach(
-            (resp: { questionId: number; answerId: number }) => {
-              if (!answersMap[resp.questionId]) {
-                answersMap[resp.questionId] = [];
+            (resp: {
+              questionId: number;
+              answerId?: number;
+              textResponse?: string;
+              isOpenEnded?: boolean;
+            }) => {
+              if (resp.isOpenEnded && resp.textResponse) {
+                textResponsesMap[resp.questionId] = resp.textResponse;
+              } else if (resp.answerId) {
+                if (!answersMap[resp.questionId]) {
+                  answersMap[resp.questionId] = [];
+                }
+                answersMap[resp.questionId].push(resp.answerId);
               }
-              answersMap[resp.questionId].push(resp.answerId);
             }
           );
           setSelectedAnswers(answersMap);
+          setTextResponses(textResponsesMap);
 
           const resumeIndex = determineResumeQuestionIndex(
             response,
-            answersMap
+            answersMap,
+            textResponsesMap
           );
           setCurrentQuestionIndex(resumeIndex);
           setQuestionStartTime(new Date());
@@ -202,11 +248,18 @@ const QuizAttempt = () => {
     });
   };
 
+  const handleTextResponseChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    setTextResponses((prev) => ({
+      ...prev,
+      [currentQuestion.id]: e.target.value,
+    }));
+  };
+
   const submitCurrentQuestionAnswers = async () => {
     const question = attemptData?.questions[currentQuestionIndex];
     if (!question || !attemptId) return;
-
-    const selected = selectedAnswers[question.id] || [];
 
     try {
       setResponseSubmissionErrors((prev) => ({
@@ -216,12 +269,35 @@ const QuizAttempt = () => {
 
       const responseTime = questionDurations[question.id] || 0;
 
-      await quizSessionService.submitAnswer(Number(attemptId), {
-        questionId: question.id,
-        selectedAnswerIds: selected,
-        responseTime: responseTime,
-        isMultipleChoice: question.type === "MULTIPLE_CHOICE",
-      });
+      if (isOpenEndedQuestion(question)) {
+        const textResponse = textResponses[question.id] || "";
+        if (textResponse.trim().length === 0) {
+          return;
+        }
+
+        await quizSessionService.submitAnswer(Number(attemptId), {
+          questionId: question.id,
+          selectedAnswerIds: [],
+          textResponse: textResponse,
+          responseTime: responseTime,
+          isMultipleChoice: false,
+          isOpenEnded: true,
+        });
+      } else {
+        const selected = selectedAnswers[question.id] || [];
+        if (selected.length === 0) {
+          return;
+        }
+
+        await quizSessionService.submitAnswer(Number(attemptId), {
+          questionId: question.id,
+          selectedAnswerIds: selected,
+          textResponse: undefined,
+          responseTime: responseTime,
+          isMultipleChoice: question.type === "MULTIPLE_CHOICE",
+          isOpenEnded: false,
+        });
+      }
     } catch (err) {
       const errorMessage = formatApiError(err);
       console.error(errorMessage);
@@ -269,7 +345,11 @@ const QuizAttempt = () => {
 
     const questions = attemptData?.questions || [];
     const totalQuestions = questions.length;
-    const answeredQuestions = Object.keys(selectedAnswers).length;
+    const answeredQuestions = questions.filter((q) =>
+      isOpenEndedQuestion(q)
+        ? textResponses[q.id]?.trim().length > 0
+        : selectedAnswers[q.id]?.length > 0
+    ).length;
 
     if (answeredQuestions < totalQuestions) {
       const confirm = window.confirm(
@@ -291,25 +371,51 @@ const QuizAttempt = () => {
       recordTimeForCurrentQuestion();
 
       for (const question of questions) {
-        const answerIds = selectedAnswers[question.id];
+        if (isOpenEndedQuestion(question)) {
+          const textResponse = textResponses[question.id];
 
-        if (
-          answerIds &&
-          answerIds.length > 0 &&
-          !responseSubmissionErrors[question.id]
-        ) {
-          const responseTime = questionDurations[question.id] || 0;
+          if (
+            textResponse &&
+            textResponse.trim().length > 0 &&
+            !responseSubmissionErrors[question.id]
+          ) {
+            const responseTime = questionDurations[question.id] || 0;
 
-          await quizSessionService.submitAnswer(Number(attemptId), {
-            questionId: question.id,
-            selectedAnswerIds: answerIds,
-            responseTime: responseTime,
-            isMultipleChoice: question.type === "MULTIPLE_CHOICE",
-          });
+            await quizSessionService.submitAnswer(Number(attemptId), {
+              questionId: question.id,
+              selectedAnswerIds: [],
+              textResponse: textResponse,
+              responseTime: responseTime,
+              isMultipleChoice: false,
+              isOpenEnded: true,
+            });
 
-          if (sessionExpired) {
-            setIsSubmitting(false);
-            return;
+            if (sessionExpired) {
+              setIsSubmitting(false);
+              return;
+            }
+          }
+        } else {
+          const answerIds = selectedAnswers[question.id];
+
+          if (
+            answerIds &&
+            answerIds.length > 0 &&
+            !responseSubmissionErrors[question.id]
+          ) {
+            const responseTime = questionDurations[question.id] || 0;
+
+            await quizSessionService.submitAnswer(Number(attemptId), {
+              questionId: question.id,
+              selectedAnswerIds: answerIds,
+              responseTime: responseTime,
+              isMultipleChoice: question.type === "MULTIPLE_CHOICE",
+            });
+
+            if (sessionExpired) {
+              setIsSubmitting(false);
+              return;
+            }
           }
         }
       }
@@ -368,25 +474,51 @@ const QuizAttempt = () => {
       const questions = attemptData?.questions || [];
 
       for (const question of questions) {
-        const answerIds = selectedAnswers[question.id];
+        if (isOpenEndedQuestion(question)) {
+          const textResponse = textResponses[question.id];
 
-        if (
-          answerIds &&
-          answerIds.length > 0 &&
-          !responseSubmissionErrors[question.id]
-        ) {
-          const responseTime = questionDurations[question.id] || 0;
+          if (
+            textResponse &&
+            textResponse.trim().length > 0 &&
+            !responseSubmissionErrors[question.id]
+          ) {
+            const responseTime = questionDurations[question.id] || 0;
 
-          await quizSessionService.submitAnswer(Number(attemptId), {
-            questionId: question.id,
-            selectedAnswerIds: answerIds,
-            responseTime: responseTime,
-            isMultipleChoice: question.type === "MULTIPLE_CHOICE",
-          });
+            await quizSessionService.submitAnswer(Number(attemptId), {
+              questionId: question.id,
+              selectedAnswerIds: [],
+              textResponse: textResponse,
+              responseTime: responseTime,
+              isMultipleChoice: false,
+              isOpenEnded: true,
+            });
 
-          if (sessionExpired) {
-            setIsSaving(false);
-            return;
+            if (sessionExpired) {
+              setIsSaving(false);
+              return;
+            }
+          }
+        } else {
+          const answerIds = selectedAnswers[question.id];
+
+          if (
+            answerIds &&
+            answerIds.length > 0 &&
+            !responseSubmissionErrors[question.id]
+          ) {
+            const responseTime = questionDurations[question.id] || 0;
+
+            await quizSessionService.submitAnswer(Number(attemptId), {
+              questionId: question.id,
+              selectedAnswerIds: answerIds,
+              responseTime: responseTime,
+              isMultipleChoice: question.type === "MULTIPLE_CHOICE",
+            });
+
+            if (sessionExpired) {
+              setIsSaving(false);
+              return;
+            }
           }
         }
       }
@@ -517,69 +649,83 @@ const QuizAttempt = () => {
           <p className="text-sm text-gray-500">
             {currentQuestion.type === "SINGLE_CHOICE"
               ? "Select one answer"
-              : "Select all that apply"}
+              : currentQuestion.type === "MULTIPLE_CHOICE"
+              ? "Select all that apply"
+              : "Enter your response in the text box below"}
           </p>
         </div>
 
         {/* Answer options */}
-        <div className="space-y-3 mb-6">
-          {currentQuestion.answers.map((answer) => (
-            <div
-              key={answer.id}
-              className={`p-3 border rounded-md flex items-center ${
-                selectedAnswers[currentQuestion.id]?.includes(answer.id)
-                  ? "border-indigo-500 bg-indigo-50"
-                  : "border-gray-300 hover:border-gray-400"
-              } ${
-                sessionExpired
-                  ? "cursor-not-allowed opacity-70"
-                  : "cursor-pointer"
-              }`}
-              onClick={() =>
-                !sessionExpired &&
-                handleAnswerSelect(currentQuestion.id, answer.id)
-              }
-            >
-              {/* Show checkbox for multiple choice, radio button for single choice */}
-              {currentQuestion.type === "MULTIPLE_CHOICE" ? (
-                <div
-                  className={`w-5 h-5 border ${
-                    selectedAnswers[currentQuestion.id]?.includes(answer.id)
-                      ? "bg-indigo-600 border-indigo-600"
-                      : "border-gray-300"
-                  } rounded mr-3 flex items-center justify-center`}
-                >
-                  {selectedAnswers[currentQuestion.id]?.includes(answer.id) && (
-                    <svg
-                      className="w-3 h-3 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      ></path>
-                    </svg>
-                  )}
-                </div>
-              ) : (
-                <div
-                  className={`w-5 h-5 rounded-full border ${
-                    selectedAnswers[currentQuestion.id]?.includes(answer.id)
-                      ? "bg-indigo-600 border-indigo-600"
-                      : "border-gray-300"
-                  } mr-3 flex items-center justify-center`}
-                >
-                  {selectedAnswers[currentQuestion.id]?.includes(answer.id) && (
-                    <div className="w-2 h-2 rounded-full bg-white"></div>
-                  )}
-                </div>
-              )}
-              <span>{answer.text}</span>
-            </div>
-          ))}
-        </div>
+        {isOpenEndedQuestion(currentQuestion) ? (
+          <div className="mb-6">
+            <textarea
+              value={textResponses[currentQuestion.id] || ""}
+              onChange={handleTextResponseChange}
+              placeholder="Enter your response here..."
+            />
+          </div>
+        ) : (
+          <div className="space-y-3 mb-6">
+            {currentQuestion.answers.map((answer) => (
+              <div
+                key={answer.id}
+                className={`p-3 border rounded-md flex items-center ${
+                  selectedAnswers[currentQuestion.id]?.includes(answer.id)
+                    ? "border-indigo-500 bg-indigo-50"
+                    : "border-gray-300 hover:border-gray-400"
+                } ${
+                  sessionExpired
+                    ? "cursor-not-allowed opacity-70"
+                    : "cursor-pointer"
+                }`}
+                onClick={() =>
+                  !sessionExpired &&
+                  handleAnswerSelect(currentQuestion.id, answer.id)
+                }
+              >
+                {/* Show checkbox for multiple choice, radio button for single choice */}
+                {currentQuestion.type === "MULTIPLE_CHOICE" ? (
+                  <div
+                    className={`w-5 h-5 border ${
+                      selectedAnswers[currentQuestion.id]?.includes(answer.id)
+                        ? "bg-indigo-600 border-indigo-600"
+                        : "border-gray-300"
+                    } rounded mr-3 flex items-center justify-center`}
+                  >
+                    {selectedAnswers[currentQuestion.id]?.includes(
+                      answer.id
+                    ) && (
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        ></path>
+                      </svg>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className={`w-5 h-5 rounded-full border ${
+                      selectedAnswers[currentQuestion.id]?.includes(answer.id)
+                        ? "bg-indigo-600 border-indigo-600"
+                        : "border-gray-300"
+                    } mr-3 flex items-center justify-center`}
+                  >
+                    {selectedAnswers[currentQuestion.id]?.includes(
+                      answer.id
+                    ) && <div className="w-2 h-2 rounded-full bg-white"></div>}
+                  </div>
+                )}
+                <span>{answer.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Error message for response submission */}
         {responseSubmissionErrors[currentQuestion.id] && (
@@ -636,7 +782,7 @@ const QuizAttempt = () => {
               className={`w-10 h-10 rounded-full ${
                 index === currentQuestionIndex
                   ? "bg-indigo-600 text-white"
-                  : selectedAnswers[question.id]?.length > 0
+                  : isQuestionAnswered(question)
                   ? "bg-indigo-100 text-indigo-600 border border-indigo-600"
                   : "bg-gray-100 text-gray-600"
               } ${sessionExpired ? "opacity-70" : ""}`}

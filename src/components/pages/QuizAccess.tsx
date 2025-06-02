@@ -35,7 +35,6 @@ const QuizAccess = () => {
       setIsLoading(true);
       setError(null);
 
-      // First validate the access code
       const isValid = await quizSessionService.validateAccessCode(accessCode);
       
       if (!isValid) {
@@ -43,13 +42,11 @@ const QuizAccess = () => {
         return;
       }
 
-      // Start the quiz attempt with the access code
       const response = await quizSessionService.startAttemptWithAccessCode(
         Number(quizId),
         accessCode
       );
 
-      // Navigate to the quiz attempt page
       navigate(`/student/quiz-attempt/${response.attemptId}`);
     } catch (err) {
       const errorMessage = formatApiError(err);

@@ -137,7 +137,6 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
   );
   const [editingAnswerId, setEditingAnswerId] = useState<number | null>(null);
 
-  // Initialize with empty strings to prevent uncontrolled to controlled warnings
   const [editedQuestionText, setEditedQuestionText] = useState("");
   const [editedQuestionType, setEditedQuestionType] =
     useState<QuestionType>("SINGLE_CHOICE");
@@ -147,7 +146,6 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
   const [editedAnswerIsCorrect, setEditedAnswerIsCorrect] = useState(false);
 
   const startEditingQuestion = (question: QuestionState) => {
-    // First set the values, then set the editing ID
     setEditedQuestionText(question.questionText || question.text || "");
     setEditedQuestionType(question.type);
     setEditedQuestionDifficulty(question.difficulty);
@@ -155,9 +153,8 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
   };
 
   const startEditingAnswer = (answer: AnswerState) => {
-    // First set the values, then set the editing ID
     setEditedAnswerText(answer.answerText || answer.text || "");
-    setEditedAnswerIsCorrect(Boolean(answer.isCorrect)); // Ensure it's a boolean
+    setEditedAnswerIsCorrect(Boolean(answer.isCorrect));
     setEditingAnswerId(answer.id);
   };
 
@@ -185,7 +182,6 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
   const cancelEdit = () => {
     setEditingQuestionId(null);
     setEditingAnswerId(null);
-    // Reset form values
     setEditedQuestionText("");
     setEditedQuestionType("SINGLE_CHOICE");
     setEditedQuestionDifficulty("EASY");
@@ -217,7 +213,6 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
             <div key={question.id} className="border rounded-lg p-4">
               <div className="mb-4">
                 {editingQuestionId === question.id ? (
-                  // Question editing form
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
@@ -288,7 +283,6 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
                     </div>
                   </div>
                 ) : (
-                  // Question display
                   <div className="flex justify-between">
                     <h3 className="font-medium">
                       <span className="text-gray-500">Q{index + 1}:</span>{" "}
@@ -333,7 +327,6 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
                     }`}
                   >
                     {editingAnswerId === answer.id ? (
-                      // Answer editing form
                       <div className="space-y-2">
                         <div>
                           <input
@@ -382,7 +375,6 @@ export const QuestionsList: React.FC<QuestionsListProps> = ({
                         </div>
                       </div>
                     ) : (
-                      // Answer display
                       <div className="flex justify-between items-center">
                         <div>
                           <span>{answer.text || answer.answerText}</span>

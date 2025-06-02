@@ -20,6 +20,8 @@ export interface SubmitResponseRequest {
   selectedAnswerIds: number[];
   responseTime: number;
   isMultipleChoice?: boolean;
+  textResponse?: string;
+  isOpenEnded?: boolean;
 }
 
 export interface SubmitAttemptRequest {
@@ -51,8 +53,10 @@ export interface AttemptResponse {
   questions: Question[];
   responses?: Array<{
     questionId: number;
-    answerId: number;
+    answerId?: number;
     isMultipleChoice?: boolean;
+    textResponse?: string;
+    isOpenEnded?: boolean;
   }>;
 }
 
@@ -62,6 +66,8 @@ export interface UserResponse {
   answerId: number;
   isCorrect: boolean;
   isMultipleChoice?: boolean;
+  textResponse?: string;
+  isOpenEnded?: boolean;
 }
 
 export interface AttemptResult {
