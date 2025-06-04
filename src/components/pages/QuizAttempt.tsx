@@ -138,6 +138,13 @@ const QuizAttempt = () => {
         const response = await quizSessionService.getAttempt(Number(attemptId));
         setAttemptData(response);
 
+        if (response.startedAt) {
+          const startTime = new Date(response.startedAt).getTime();
+          const currentTime = new Date().getTime();
+          const elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+          setElapsedTime(elapsedSeconds);
+        }
+
         if (checkAttemptStatus(response)) {
           if (response.status === "ABANDONED") {
             setSessionExpired(true);
