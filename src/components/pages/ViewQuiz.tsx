@@ -28,7 +28,6 @@ const useQuizData = (quizId: number) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Extended interface to handle both property name formats
   interface RawAnswer {
     id: number;
     text: string;
@@ -58,7 +57,6 @@ const useQuizData = (quizId: number) => {
             type: question.type,
             difficulty: question.difficulty,
             answers: answers.map((answer) => {
-              // Cast to our extended interface that handles both property names
               const rawAnswer = answer as unknown as RawAnswer;
               const correctValue = rawAnswer.isCorrect !== undefined ? 
                                   rawAnswer.isCorrect : 
@@ -92,9 +90,7 @@ const useQuizData = (quizId: number) => {
   return { quiz, questions, isLoading, error };
 };
 
-// Custom component for displaying answers with visibility controls for correct answers
 const AnswersList = ({ question, isTeacher }: { question: QuestionState, isTeacher: boolean }) => {
-  // Force convert isCorrect to boolean for each answer - this will fix the highlighting issue
   const answersWithBooleanCorrect = question.answers.map(answer => ({
     ...answer,
     isCorrect: Boolean(answer.isCorrect)
@@ -195,7 +191,6 @@ const ViewQuiz = () => {
       <Header title={quiz.title} onBack={handleBackNavigation} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Quiz Details */}
         <div className="bg-white shadow rounded-lg mb-6">
           <div className="p-6">
             <div className="flex justify-between items-start">
@@ -237,7 +232,6 @@ const ViewQuiz = () => {
           </div>
         </div>
 
-        {/* Display questions with custom answer rendering */}
         <div className="bg-white shadow rounded-lg mb-6">
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">

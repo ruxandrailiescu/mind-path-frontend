@@ -1,7 +1,5 @@
-// Auth types
 export type { AuthResponse, UserSession, PasswordChange } from "./auth";
 
-// User types
 export type {
   UserProfile,
   UserRole,
@@ -9,7 +7,6 @@ export type {
   TeacherCreation,
 } from "./user";
 
-// Quiz, question, answer types
 export type {
   QuizStatus,
   QuizCreation,

@@ -21,23 +21,19 @@ const Login = () => {
     }
   }, [authError]);
 
-  // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    // Update form data
     setCredentials((prev) => ({
       ...prev,
       [name]: value,
     }));
 
-    // Mark field as touched
     setTouched((prev) => ({
       ...prev,
       [name]: true,
     }));
 
-    // Clear field-specific error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -45,23 +41,19 @@ const Login = () => {
       }));
     }
 
-    // Clear general error when user makes any change
     if (generalError) {
       setGeneralError(null);
     }
   };
 
-  // Handle field blur for real-time validation
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const { name } = e.target;
 
-    // Mark field as touched
     setTouched((prev) => ({
       ...prev,
       [name]: true,
     }));
 
-    // Validate just this field
     const result = validateLoginForm(credentials);
     if (!result.isValid && result.errors[name]) {
       setErrors((prev) => ({
@@ -71,15 +63,12 @@ const Login = () => {
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Reset errors
     setErrors({});
     setGeneralError(null);
 
-    // Validate all fields
     const validationResult = validateLoginForm(credentials);
     if (!validationResult.isValid) {
       setErrors(validationResult.errors);
@@ -99,7 +88,6 @@ const Login = () => {
     }
   };
 
-  // Helper to determine if a field has an error and should show it
   const showError = (field: keyof UserSession) =>
     touched[field] && errors[field];
 

@@ -14,7 +14,7 @@ const QuizSession = () => {
   const [session, setSession] = useState<QuizSessionResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expiresIn, setExpiresIn] = useState<number>(30); // Default to 30 minutes
+  const [expiresIn, setExpiresIn] = useState<number>(30);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {

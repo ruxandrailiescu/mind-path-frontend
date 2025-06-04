@@ -11,7 +11,6 @@ const TeacherDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // fetch quizzes when component mounts
   useEffect(() => {
     const fetchQuizzes = async () => {
       setIsLoading(true);
@@ -53,7 +52,6 @@ const TeacherDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
@@ -64,9 +62,7 @@ const TeacherDashboard = () => {
         </div>
       </header>
 
-      {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
@@ -111,7 +107,6 @@ const TeacherDashboard = () => {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
             <button
@@ -147,7 +142,6 @@ const TeacherDashboard = () => {
           </nav>
         </div>
 
-        {/* Tab content */}
         <div className="bg-white shadow rounded-lg">
           {activeTab === "quizzes" && (
             <div className="p-6">
@@ -288,43 +282,6 @@ const TeacherDashboard = () => {
                       </th>
                     </tr>
                   </thead>
-                  {/* <tbody className="bg-white divide-y divide-gray-200">
-                    {studentProgress.map((student) => (
-                      <tr key={student.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {student.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {student.quizzesTaken}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="flex items-center">
-                            <span className="mr-2">{student.avgScore}%</span>
-                            <div className="w-24 bg-gray-200 rounded-full h-2.5">
-                              <div
-                                className={`h-2.5 rounded-full ${
-                                  student.avgScore >= 80
-                                    ? "bg-green-600"
-                                    : student.avgScore >= 60
-                                    ? "bg-yellow-400"
-                                    : "bg-red-600"
-                                }`}
-                                style={{ width: `${student.avgScore}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {student.lastActive}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button className="text-indigo-600 hover:text-indigo-900">
-                            View Details
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody> */}
                 </table>
               </div>
             </div>

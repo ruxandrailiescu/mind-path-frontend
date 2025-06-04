@@ -30,7 +30,7 @@ const EditQuiz = () => {
     handleAddAnswer,
     handleRemoveAnswer,
     handleRemoveQuestion
-  } = useQuizForm(true); // true indicates edit mode
+  } = useQuizForm(true);
 
   return (
     <div className="min-h-screen bg-gray-50">

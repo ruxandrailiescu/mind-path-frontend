@@ -558,7 +558,6 @@ const QuizAttempt = () => {
           {errorMessage || "Failed to load quiz"}
         </div>
 
-        {/* Add a return to dashboard button if session has expired */}
         {sessionExpired && (
           <div className="flex justify-center">
             <button
@@ -621,7 +620,6 @@ const QuizAttempt = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-        {/* Question progress */}
         <div className="mb-4">
           <div className="flex justify-between text-sm text-gray-500 mb-1">
             <span>
@@ -643,7 +641,6 @@ const QuizAttempt = () => {
           </div>
         </div>
 
-        {/* Question text */}
         <div className="mb-6">
           <h2 className="text-xl font-medium mb-2">{currentQuestion.text}</h2>
           <p className="text-sm text-gray-500">
@@ -655,12 +652,12 @@ const QuizAttempt = () => {
           </p>
         </div>
 
-        {/* Answer options */}
         {isOpenEndedQuestion(currentQuestion) ? (
           <div className="mb-6">
             <textarea
               value={textResponses[currentQuestion.id] || ""}
               onChange={handleTextResponseChange}
+              className="w-full min-h-25 p-2"
               placeholder="Enter your response here..."
             />
           </div>
@@ -683,7 +680,6 @@ const QuizAttempt = () => {
                   handleAnswerSelect(currentQuestion.id, answer.id)
                 }
               >
-                {/* Show checkbox for multiple choice, radio button for single choice */}
                 {currentQuestion.type === "MULTIPLE_CHOICE" ? (
                   <div
                     className={`w-5 h-5 border ${
@@ -727,14 +723,12 @@ const QuizAttempt = () => {
           </div>
         )}
 
-        {/* Error message for response submission */}
         {responseSubmissionErrors[currentQuestion.id] && (
           <div className="mb-4 text-sm text-red-600">
             {responseSubmissionErrors[currentQuestion.id]}
           </div>
         )}
 
-        {/* Navigation buttons */}
         <div className="flex justify-between">
           <button
             type="button"
@@ -771,7 +765,6 @@ const QuizAttempt = () => {
         </div>
       </div>
 
-      {/* Question navigation bar */}
       <div className="bg-white rounded-lg shadow-md p-4">
         <div className="flex flex-wrap gap-2 justify-center">
           {attemptData.questions.map((question, index) => (

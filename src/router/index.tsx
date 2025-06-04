@@ -104,7 +104,6 @@ const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
-          // Fallback route
           { path: "*", element: <Navigate to="/" /> },
         ],
       },

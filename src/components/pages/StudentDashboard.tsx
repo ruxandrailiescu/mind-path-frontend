@@ -115,7 +115,6 @@ const StudentDashboard = () => {
 
   return (
     <div className="container mx-auto p-4">
-      {/* In-Progress Quiz Attempts Section */}
       {inProgressAttempts.length > 0 && (
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-4">Continue Your Progress</h1>
@@ -153,7 +152,6 @@ const StudentDashboard = () => {
         </div>
       )}
 
-      {/* Available Quizzes Section */}
       <h1 className="text-2xl font-bold mb-6">Available Quizzes</h1>
 
       {!activeQuizzes || activeQuizzes.length === 0 ? (
@@ -184,7 +182,6 @@ const StudentDashboard = () => {
         </div>
       )}
 
-      {/* Completed Quiz Attempts Section */}
       <div className="p-4"></div>
       
       {completedAttempts.length > 0 && (
@@ -192,7 +189,6 @@ const StudentDashboard = () => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold">Past Quiz Results</h2>
 
-            {/* Pagination Controls */}
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrevPage}
@@ -214,7 +210,6 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          {/* Display current page items */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {currentItems.map((attempt) => (
               <div

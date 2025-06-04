@@ -499,7 +499,6 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({
           </div>
         </div>
 
-        {/* Current answers */}
         <div>
           <h3 className="text-md font-medium mb-2">Answer Options</h3>
 
@@ -537,7 +536,6 @@ export const AddQuestionForm: React.FC<AddQuestionFormProps> = ({
           )}
         </div>
 
-        {/* Add answer form */}
         <div className="border-t pt-4">
           <h3 className="text-md font-medium mb-2">Add Answer</h3>
           <div className="flex space-x-4">

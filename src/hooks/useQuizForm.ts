@@ -21,7 +21,7 @@ import {
 interface QuestionState {
   id: number;
   questionText: string;
-  text?: string; // for compatibility with API response
+  text?: string;
   type: QuestionType;
   difficulty: QuestionDifficulty;
   answers: AnswerState[];
@@ -30,7 +30,7 @@ interface QuestionState {
 interface AnswerState {
   id: number;
   answerText: string;
-  text?: string; // for compatibility with API response
+  text?: string;
   isCorrect: boolean;
 }
 
@@ -196,7 +196,6 @@ export const useQuizForm = (isEditMode = false) => {
     setError(null);
     if (!validateCurrentQuestion()) return;
 
-    // For editing mode, add the question to the database
     if (isEditMode && numericQuizId !== undefined) {
       setIsSaving(true);
       try {
@@ -206,13 +205,11 @@ export const useQuizForm = (isEditMode = false) => {
           difficulty: currentQuestion.difficulty,
         };
 
-        // Add question to quiz in the backend
         const questionId = await questionService.addQuestionToQuiz(
           numericQuizId,
           questionData
         );
 
-        // Add all the answers for this question
         for (const answer of currentQuestion.answers) {
           const answerData: AnswerCreation = {
             answerText: answer.answerText,
@@ -222,10 +219,8 @@ export const useQuizForm = (isEditMode = false) => {
           await answerService.addAnswerToQuestion(questionId, answerData);
         }
 
-        // Refresh the questions list to include the new question from the server
         const updatedQuestions = await questionService.getQuizQuestions(numericQuizId);
         
-        // Transform the questions to match our local state format
         const transformedQuestions = updatedQuestions.map((q: QuestionSummary) => ({
           id: q.id,
           questionText: q.text,
@@ -249,11 +244,9 @@ export const useQuizForm = (isEditMode = false) => {
         setIsSaving(false);
       }
     } else {
-      // For creating mode, just add to local state
       setQuestions((prev) => [...prev, { ...currentQuestion }]);
     }
 
-    // Reset the current question form
     setCurrentQuestion({
       id: generateId(),
       questionText: "",
@@ -264,15 +257,12 @@ export const useQuizForm = (isEditMode = false) => {
   };
 
   const handleRemoveQuestion = async (questionId: number) => {
-    // First check if this is a question from the database (not a temp ID)
     const questionExists = questions.find(q => q.id === questionId);
     
     if (isEditMode && questionExists && !isNaN(questionId)) {
       setIsSaving(true);
       try {
-        // Delete the question in the backend
         await questionService.deleteQuestion(questionId);
-        // Remove it from local state
         setQuestions((prev) => prev.filter((q) => q.id !== questionId));
       } catch (err) {
         const errorMessage = formatApiError(err);
@@ -282,7 +272,6 @@ export const useQuizForm = (isEditMode = false) => {
         setIsSaving(false);
       }
     } else {
-      // Just remove from local state
       setQuestions((prev) => prev.filter((q) => q.id !== questionId));
     }
   };
@@ -504,15 +493,12 @@ export const useQuizForm = (isEditMode = false) => {
     setError(null);
 
     try {
-      // Only include fields that are actually provided in the update
       const answerUpdateData: Partial<AnswerCreation> = {};
       
-      // Only add answerText if it's being changed
       if (answerData.answerText !== undefined) {
         answerUpdateData.answerText = answerData.answerText;
       }
       
-      // Only add isCorrect if it's being changed
       if (answerData.isCorrect !== undefined) {
         answerUpdateData.isCorrect = answerData.isCorrect;
       }
