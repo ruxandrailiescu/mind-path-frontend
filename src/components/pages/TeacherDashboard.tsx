@@ -7,6 +7,7 @@ import { formatApiError } from "../../utils/validationUtils";
 import {
   quizSessionService,
   TeacherDashboardStats,
+  StudentProgress,
 } from "../../api/quizSession";
 
 const TeacherDashboard = () => {
@@ -14,6 +15,7 @@ const TeacherDashboard = () => {
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
   const [dashboardStats, setDashboardStats] =
     useState<TeacherDashboardStats | null>(null);
+  const [studentProgress, setStudentProgress] = useState<StudentProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,8 +28,11 @@ const TeacherDashboard = () => {
         const fetchedQuizzes = await quizService.getAllQuizzes();
         const teacherDashboardStats =
           await quizSessionService.getDashboardStats();
+        const fetchedStudProgress =
+          await quizSessionService.getStudentProgress();
         setQuizzes(fetchedQuizzes);
         setDashboardStats(teacherDashboardStats);
+        setStudentProgress(fetchedStudProgress);
       } catch (err) {
         const errorMessage = formatApiError(err);
         console.error(errorMessage);
@@ -53,10 +58,6 @@ const TeacherDashboard = () => {
       console.error(errorMessage);
       alert("Failed to delete quiz. Please try again.");
     }
-  };
-
-  const getCompletionsCount = () => {
-    return 0;
   };
 
   return (
@@ -146,16 +147,6 @@ const TeacherDashboard = () => {
             >
               Student Progress
             </button>
-            <button
-              onClick={() => setActiveTab("analytics")}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "analytics"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Analytics
-            </button>
           </nav>
         </div>
 
@@ -206,9 +197,6 @@ const TeacherDashboard = () => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Questions
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Completions
-                        </th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
@@ -241,9 +229,6 @@ const TeacherDashboard = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {quiz.questions ? quiz.questions.length : 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {getCompletionsCount()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <Link
@@ -294,26 +279,29 @@ const TeacherDashboard = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Last Active
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
                     </tr>
                   </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {studentProgress.map((student) => (
+                      <tr key={student.studentId}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {student.firstName} {student.lastName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {student.quizzesTaken}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {student.avgScore
+                            ? `${student.avgScore.toFixed(2)}%`
+                            : "N/A"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {student.lastActive}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "analytics" && (
-            <div className="p-6">
-              <h2 className="text-lg font-medium mb-6">Analytics Dashboard</h2>
-              <p className="text-gray-600">
-                Analytics charts and visualizations will be displayed here.
-              </p>
-              <div className="h-64 flex items-center justify-center border border-dashed border-gray-300 rounded-lg">
-                <p className="text-gray-400">
-                  Knowledge tracing visualizations coming soon
-                </p>
               </div>
             </div>
           )}
