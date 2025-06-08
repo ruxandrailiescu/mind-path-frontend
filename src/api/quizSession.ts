@@ -94,6 +94,11 @@ export interface AttemptResult {
   }>;
 }
 
+export interface TeacherDashboardStats {
+  activeStudentsCount: number;
+  completionRate: number;
+}
+
 export const quizSessionService = {
   createSession: async (
     request: CreateSessionRequest
@@ -166,6 +171,11 @@ export const quizSessionService = {
 
   getCompletedAttempts: async (): Promise<AttemptResult[]> => {
     const response = await apiClient.get("/attempts/completed");
+    return response.data;
+  },
+
+  getDashboardStats: async (): Promise<TeacherDashboardStats> => {
+    const response = await apiClient.get("/teacher/dashboard/stats");
     return response.data;
   },
 };

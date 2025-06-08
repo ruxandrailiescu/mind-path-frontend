@@ -4,21 +4,30 @@ import { Link } from "react-router-dom";
 import { QuizSummary } from "../../types";
 import { quizService } from "../../api/quiz";
 import { formatApiError } from "../../utils/validationUtils";
+import {
+  quizSessionService,
+  TeacherDashboardStats,
+} from "../../api/quizSession";
 
 const TeacherDashboard = () => {
   const [activeTab, setActiveTab] = useState("quizzes");
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
+  const [dashboardStats, setDashboardStats] =
+    useState<TeacherDashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchQuizzes = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
         const fetchedQuizzes = await quizService.getAllQuizzes();
+        const teacherDashboardStats =
+          await quizSessionService.getDashboardStats();
         setQuizzes(fetchedQuizzes);
+        setDashboardStats(teacherDashboardStats);
       } catch (err) {
         const errorMessage = formatApiError(err);
         console.error(errorMessage);
@@ -28,7 +37,7 @@ const TeacherDashboard = () => {
       }
     };
 
-    fetchQuizzes();
+    fetchData();
   }, []);
 
   const handleDeleteQuiz = async (quizId: number) => {
@@ -73,7 +82,9 @@ const TeacherDashboard = () => {
                 <p className="text-sm font-medium text-gray-600">
                   Total Quizzes
                 </p>
-                <p className="text-2xl font-semibold">{quizzes.length}</p>
+                <p className="text-2xl font-semibold">
+                  {isLoading ? "..." : quizzes.length}
+                </p>
               </div>
             </div>
           </div>
@@ -87,7 +98,9 @@ const TeacherDashboard = () => {
                 <p className="text-sm font-medium text-gray-600">
                   Active Students
                 </p>
-                <p className="text-2xl font-semibold">48</p>
+                <p className="text-2xl font-semibold">
+                  {isLoading ? "..." : dashboardStats?.activeStudentsCount || 0}
+                </p>
               </div>
             </div>
           </div>
@@ -101,7 +114,11 @@ const TeacherDashboard = () => {
                 <p className="text-sm font-medium text-gray-600">
                   Avg. Completion Rate
                 </p>
-                <p className="text-2xl font-semibold">82%</p>
+                <p className="text-2xl font-semibold">
+                  {isLoading
+                    ? "..."
+                    : `${dashboardStats?.completionRate.toFixed(1) || 0}%`}
+                </p>
               </div>
             </div>
           </div>
