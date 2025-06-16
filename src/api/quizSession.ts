@@ -15,20 +15,6 @@ export interface QuizSessionResponse {
   expiresAt?: string;
 }
 
-export interface TeacherDashboardStats {
-  activeStudentsCount: number;
-  completionRate: number;
-}
-
-export interface StudentProgress {
-  studentId: number;
-  firstName: string;
-  lastName: string;
-  quizzesTaken: number;
-  avgScore: number;
-  lastActive: string;
-}
-
 export const quizSessionService = {
   createSession: async (
     request: CreateSessionRequest
@@ -42,15 +28,5 @@ export const quizSessionService = {
       `/quiz-sessions/validate?accessCode=${accessCode}`
     );
     return response.data;
-  },
-
-  getDashboardStats: async (): Promise<TeacherDashboardStats> => {
-    const response = await apiClient.get("/teacher/dashboard/stats");
-    return response.data;
-  },
-
-  getStudentProgress: async (): Promise<StudentProgress[]> => {
-    const reponse = await apiClient.get("/teacher/dashboard/students");
-    return reponse.data;
   },
 };

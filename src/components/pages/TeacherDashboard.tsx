@@ -5,10 +5,10 @@ import { QuizSummary } from "../../types";
 import { quizService } from "../../api/quiz";
 import { formatApiError } from "../../utils/validationUtils";
 import {
-  quizSessionService,
+  teacherDashboardService,
   TeacherDashboardStats,
   StudentProgress,
-} from "../../api/quizSession";
+} from "../../api/teacherDashboard";
 
 const TeacherDashboard = () => {
   const [activeTab, setActiveTab] = useState("quizzes");
@@ -27,9 +27,9 @@ const TeacherDashboard = () => {
       try {
         const fetchedQuizzes = await quizService.getAllQuizzes();
         const teacherDashboardStats =
-          await quizSessionService.getDashboardStats();
+          await teacherDashboardService.getDashboardStats();
         const fetchedStudProgress =
-          await quizSessionService.getStudentProgress();
+          await teacherDashboardService.getStudentProgress();
         setQuizzes(fetchedQuizzes);
         setDashboardStats(teacherDashboardStats);
         setStudentProgress(fetchedStudProgress);
