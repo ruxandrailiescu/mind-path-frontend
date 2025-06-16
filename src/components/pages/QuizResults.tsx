@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { CheckCircle, XCircle, Clock, Award } from "lucide-react";
-import { quizSessionService, AttemptResult } from "../../api/quizSession";
+import { quizAttemptService, AttemptResult } from "../../api/quizAttempt";
 import { AxiosError } from "axios";
 import { formatApiError } from "../../utils/validationUtils";
 
@@ -29,7 +29,7 @@ const QuizResults = () => {
           return;
         }
 
-        const response = await quizSessionService.getResults(Number(attemptId));
+        const response = await quizAttemptService.getResults(Number(attemptId));
         setResultData(response);
       } catch (err: unknown) {
         const axiosError = err as AxiosError<{ message: string }>;

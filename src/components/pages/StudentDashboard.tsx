@@ -9,10 +9,10 @@ import {
 } from "lucide-react";
 import { quizService } from "../../api/quiz";
 import {
-  quizSessionService,
+  quizAttemptService,
   AttemptResponse,
   AttemptResult,
-} from "../../api/quizSession";
+} from "../../api/quizAttempt";
 import { QuizSummary } from "../../types";
 import { formatApiError } from "../../utils/validationUtils";
 
@@ -70,7 +70,7 @@ const StudentDashboard = () => {
     const fetchInProgressAttempts = async () => {
       try {
         setIsLoadingAttempts(true);
-        const attempts = await quizSessionService.getInProgressAttempts();
+        const attempts = await quizAttemptService.getInProgressAttempts();
         setInProgressAttempts(attempts);
       } catch (err) {
         const errorMessage = formatApiError(err);
@@ -85,7 +85,7 @@ const StudentDashboard = () => {
       try {
         setIsLoadingAttempts(true);
         const completedAttempts =
-          await quizSessionService.getCompletedAttempts();
+          await quizAttemptService.getCompletedAttempts();
         setCompletedAttempts(completedAttempts);
       } catch (err) {
         const errorMessage = formatApiError(err);
@@ -183,7 +183,7 @@ const StudentDashboard = () => {
       )}
 
       <div className="p-4"></div>
-      
+
       {completedAttempts.length > 0 && (
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">

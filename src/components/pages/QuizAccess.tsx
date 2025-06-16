@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Scanner, IDetectedBarcode } from "@yudiel/react-qr-scanner";
 import { quizSessionService } from "../../api/quizSession";
+import { quizAttemptService } from "../../api/quizAttempt";
 import { formatApiError } from "../../utils/validationUtils";
 
 const QuizAccess = () => {
@@ -36,13 +37,13 @@ const QuizAccess = () => {
       setError(null);
 
       const isValid = await quizSessionService.validateAccessCode(accessCode);
-      
+
       if (!isValid) {
         setError("Invalid or expired access code. Please check and try again.");
         return;
       }
 
-      const response = await quizSessionService.startAttemptWithAccessCode(
+      const response = await quizAttemptService.startAttemptWithAccessCode(
         Number(quizId),
         accessCode
       );
@@ -80,7 +81,10 @@ const QuizAccess = () => {
               onScan={handleQrCodeScan}
               onError={(error: unknown) => {
                 console.error(error);
-                setError("Failed to scan QR code: " + (error instanceof Error ? error.message : "Unknown error"));
+                setError(
+                  "Failed to scan QR code: " +
+                    (error instanceof Error ? error.message : "Unknown error")
+                );
                 setShowScanner(false);
               }}
             />
@@ -105,7 +109,7 @@ const QuizAccess = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Enter access code"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     handleStartQuiz();
                   }
                 }}

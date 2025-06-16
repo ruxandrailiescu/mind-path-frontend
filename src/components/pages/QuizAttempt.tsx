@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  quizSessionService,
+  quizAttemptService,
   AttemptResponse,
   Question,
-} from "../../api/quizSession";
+} from "../../api/quizAttempt";
 import { formatApiError } from "../../utils/validationUtils";
 
 const QuizAttempt = () => {
@@ -135,7 +135,7 @@ const QuizAttempt = () => {
         setIsLoading(true);
         if (!attemptId) return;
 
-        const response = await quizSessionService.getAttempt(Number(attemptId));
+        const response = await quizAttemptService.getAttempt(Number(attemptId));
         setAttemptData(response);
 
         if (response.startedAt) {
@@ -208,7 +208,7 @@ const QuizAttempt = () => {
       if (!attemptId) return;
 
       try {
-        const response = await quizSessionService.getAttempt(Number(attemptId));
+        const response = await quizAttemptService.getAttempt(Number(attemptId));
         if (checkAttemptStatus(response) && response.status === "ABANDONED") {
           setSessionExpired(true);
           setError(
@@ -282,7 +282,7 @@ const QuizAttempt = () => {
           return;
         }
 
-        await quizSessionService.submitAnswer(Number(attemptId), {
+        await quizAttemptService.submitAnswer(Number(attemptId), {
           questionId: question.id,
           selectedAnswerIds: [],
           textResponse: textResponse,
@@ -296,7 +296,7 @@ const QuizAttempt = () => {
           return;
         }
 
-        await quizSessionService.submitAnswer(Number(attemptId), {
+        await quizAttemptService.submitAnswer(Number(attemptId), {
           questionId: question.id,
           selectedAnswerIds: selected,
           textResponse: undefined,
@@ -388,7 +388,7 @@ const QuizAttempt = () => {
           ) {
             const responseTime = questionDurations[question.id] || 0;
 
-            await quizSessionService.submitAnswer(Number(attemptId), {
+            await quizAttemptService.submitAnswer(Number(attemptId), {
               questionId: question.id,
               selectedAnswerIds: [],
               textResponse: textResponse,
@@ -412,7 +412,7 @@ const QuizAttempt = () => {
           ) {
             const responseTime = questionDurations[question.id] || 0;
 
-            await quizSessionService.submitAnswer(Number(attemptId), {
+            await quizAttemptService.submitAnswer(Number(attemptId), {
               questionId: question.id,
               selectedAnswerIds: answerIds,
               responseTime: responseTime,
@@ -427,7 +427,7 @@ const QuizAttempt = () => {
         }
       }
 
-      const response = await quizSessionService.submitAttempt(
+      const response = await quizAttemptService.submitAttempt(
         Number(attemptId),
         {
           totalTime: elapsedTime,
@@ -491,7 +491,7 @@ const QuizAttempt = () => {
           ) {
             const responseTime = questionDurations[question.id] || 0;
 
-            await quizSessionService.submitAnswer(Number(attemptId), {
+            await quizAttemptService.submitAnswer(Number(attemptId), {
               questionId: question.id,
               selectedAnswerIds: [],
               textResponse: textResponse,
@@ -515,7 +515,7 @@ const QuizAttempt = () => {
           ) {
             const responseTime = questionDurations[question.id] || 0;
 
-            await quizSessionService.submitAnswer(Number(attemptId), {
+            await quizAttemptService.submitAnswer(Number(attemptId), {
               questionId: question.id,
               selectedAnswerIds: answerIds,
               responseTime: responseTime,
@@ -530,7 +530,7 @@ const QuizAttempt = () => {
         }
       }
 
-      await quizSessionService.saveProgress(Number(attemptId));
+      await quizAttemptService.saveProgress(Number(attemptId));
 
       navigate("/student/dashboard");
     } catch (err) {
