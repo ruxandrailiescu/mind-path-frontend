@@ -4,6 +4,7 @@ import {
   quizAttemptService,
   AttemptResponse,
   Question,
+  SubmitResponseRequest,
 } from "../../api/quizAttempt";
 import { formatApiError } from "../../utils/validationUtils";
 
@@ -55,12 +56,8 @@ const QuizAttempt = () => {
     }
   }, [currentQuestionIndex, attemptData]);
 
-  const isOpenEndedQuestion = (question: Question): boolean => {
-    return question.type === "OPEN_ENDED";
-  };
-
   const isQuestionAnswered = (question: Question): boolean => {
-    if (isOpenEndedQuestion(question)) {
+    if (question.type === "OPEN_ENDED") {
       const textResponse = textResponses[question.id];
       return textResponse != null && textResponse.trim().length > 0;
     } else {
@@ -268,43 +265,36 @@ const QuizAttempt = () => {
     const question = attemptData?.questions[currentQuestionIndex];
     if (!question || !attemptId) return;
 
+    setResponseSubmissionErrors((prev) => ({
+      ...prev,
+      [question.id]: undefined,
+    }));
+
+    if (question.type === "OPEN_ENDED") {
+      const txt = (textResponses[question.id] || "").trim();
+      if (!txt) return;
+    } else {
+      const picks = selectedAnswers[question.id] || [];
+      if (picks.length === 0) return;
+    }
+
     try {
-      setResponseSubmissionErrors((prev) => ({
-        ...prev,
-        [question.id]: undefined,
-      }));
+      const payload: SubmitResponseRequest = {
+        questionId: question.id,
+        selectedAnswerIds:
+          question.type === "OPEN_ENDED"
+            ? []
+            : selectedAnswers[question.id] || [],
+        textResponse:
+          question.type === "OPEN_ENDED"
+            ? textResponses[question.id]
+            : undefined,
+        responseTime: questionDurations[question.id] || 0,
+        isMultipleChoice: question.type === "MULTIPLE_CHOICE",
+        isOpenEnded: question.type === "OPEN_ENDED",
+      };
 
-      const responseTime = questionDurations[question.id] || 0;
-
-      if (isOpenEndedQuestion(question)) {
-        const textResponse = textResponses[question.id] || "";
-        if (textResponse.trim().length === 0) {
-          return;
-        }
-
-        await quizAttemptService.submitAnswer(Number(attemptId), {
-          questionId: question.id,
-          selectedAnswerIds: [],
-          textResponse: textResponse,
-          responseTime: responseTime,
-          isMultipleChoice: false,
-          isOpenEnded: true,
-        });
-      } else {
-        const selected = selectedAnswers[question.id] || [];
-        if (selected.length === 0) {
-          return;
-        }
-
-        await quizAttemptService.submitAnswer(Number(attemptId), {
-          questionId: question.id,
-          selectedAnswerIds: selected,
-          textResponse: undefined,
-          responseTime: responseTime,
-          isMultipleChoice: question.type === "MULTIPLE_CHOICE",
-          isOpenEnded: false,
-        });
-      }
+      await quizAttemptService.submitAnswer(Number(attemptId), payload);
     } catch (err) {
       const errorMessage = formatApiError(err);
       console.error(errorMessage);
@@ -349,11 +339,12 @@ const QuizAttempt = () => {
     }
 
     await submitCurrentQuestionAnswers();
+    recordTimeForCurrentQuestion();
 
     const questions = attemptData?.questions || [];
     const totalQuestions = questions.length;
     const answeredQuestions = questions.filter((q) =>
-      isOpenEndedQuestion(q)
+      q.type === "OPEN_ENDED"
         ? textResponses[q.id]?.trim().length > 0
         : selectedAnswers[q.id]?.length > 0
     ).length;
@@ -373,58 +364,6 @@ const QuizAttempt = () => {
         setError("Invalid attempt ID");
         setIsSubmitting(false);
         return;
-      }
-
-      recordTimeForCurrentQuestion();
-
-      for (const question of questions) {
-        if (isOpenEndedQuestion(question)) {
-          const textResponse = textResponses[question.id];
-
-          if (
-            textResponse &&
-            textResponse.trim().length > 0 &&
-            !responseSubmissionErrors[question.id]
-          ) {
-            const responseTime = questionDurations[question.id] || 0;
-
-            await quizAttemptService.submitAnswer(Number(attemptId), {
-              questionId: question.id,
-              selectedAnswerIds: [],
-              textResponse: textResponse,
-              responseTime: responseTime,
-              isMultipleChoice: false,
-              isOpenEnded: true,
-            });
-
-            if (sessionExpired) {
-              setIsSubmitting(false);
-              return;
-            }
-          }
-        } else {
-          const answerIds = selectedAnswers[question.id];
-
-          if (
-            answerIds &&
-            answerIds.length > 0 &&
-            !responseSubmissionErrors[question.id]
-          ) {
-            const responseTime = questionDurations[question.id] || 0;
-
-            await quizAttemptService.submitAnswer(Number(attemptId), {
-              questionId: question.id,
-              selectedAnswerIds: answerIds,
-              responseTime: responseTime,
-              isMultipleChoice: question.type === "MULTIPLE_CHOICE",
-            });
-
-            if (sessionExpired) {
-              setIsSubmitting(false);
-              return;
-            }
-          }
-        }
       }
 
       const response = await quizAttemptService.submitAttempt(
@@ -454,7 +393,6 @@ const QuizAttempt = () => {
           "This quiz session has expired. Your attempt could not be submitted."
         );
       }
-
       setIsSubmitting(false);
     }
   };
@@ -478,58 +416,6 @@ const QuizAttempt = () => {
         return;
       }
 
-      const questions = attemptData?.questions || [];
-
-      for (const question of questions) {
-        if (isOpenEndedQuestion(question)) {
-          const textResponse = textResponses[question.id];
-
-          if (
-            textResponse &&
-            textResponse.trim().length > 0 &&
-            !responseSubmissionErrors[question.id]
-          ) {
-            const responseTime = questionDurations[question.id] || 0;
-
-            await quizAttemptService.submitAnswer(Number(attemptId), {
-              questionId: question.id,
-              selectedAnswerIds: [],
-              textResponse: textResponse,
-              responseTime: responseTime,
-              isMultipleChoice: false,
-              isOpenEnded: true,
-            });
-
-            if (sessionExpired) {
-              setIsSaving(false);
-              return;
-            }
-          }
-        } else {
-          const answerIds = selectedAnswers[question.id];
-
-          if (
-            answerIds &&
-            answerIds.length > 0 &&
-            !responseSubmissionErrors[question.id]
-          ) {
-            const responseTime = questionDurations[question.id] || 0;
-
-            await quizAttemptService.submitAnswer(Number(attemptId), {
-              questionId: question.id,
-              selectedAnswerIds: answerIds,
-              responseTime: responseTime,
-              isMultipleChoice: question.type === "MULTIPLE_CHOICE",
-            });
-
-            if (sessionExpired) {
-              setIsSaving(false);
-              return;
-            }
-          }
-        }
-      }
-
       await quizAttemptService.saveProgress(Number(attemptId));
 
       navigate("/student/dashboard");
@@ -548,7 +434,6 @@ const QuizAttempt = () => {
           "This quiz session has expired. Your progress could not be saved."
         );
       }
-
       setIsSaving(false);
     }
   };
@@ -659,7 +544,7 @@ const QuizAttempt = () => {
           </p>
         </div>
 
-        {isOpenEndedQuestion(currentQuestion) ? (
+        {currentQuestion.type === "OPEN_ENDED" ? (
           <div className="mb-6">
             <textarea
               value={textResponses[currentQuestion.id] || ""}

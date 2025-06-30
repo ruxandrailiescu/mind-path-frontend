@@ -111,7 +111,7 @@ export const quizAttemptService = {
   submitAnswer: async (
     attemptId: number,
     request: SubmitResponseRequest
-  ): Promise<UserResponse> => {
+  ): Promise<void> => {
     const response = await apiClient.post(
       `/attempts/${attemptId}/responses`,
       request
