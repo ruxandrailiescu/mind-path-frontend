@@ -8,6 +8,8 @@ import {
 } from "../../api/quizAttempt";
 import { formatApiError } from "../../utils/validationUtils";
 
+type Pools = { easy: Question[]; medium: Question[]; hard: Question[] };
+
 const QuizAttempt = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
@@ -35,6 +37,11 @@ const QuizAttempt = () => {
     Record<number, string | undefined>
   >({});
 
+  const [pools, setPools] = useState<Pools>({ easy: [], medium: [], hard: [] });
+  const [sequence, setSequence] = useState<Question[]>([]);
+  const [streakCorrect, setStreakCorrect] = useState(0);
+  const [streakWrong, setStreakWrong] = useState(0);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setElapsedTime((prev) => prev + 1);
@@ -44,17 +51,27 @@ const QuizAttempt = () => {
   }, []);
 
   useEffect(() => {
-    if (
-      attemptData &&
-      attemptData.questions &&
-      attemptData.questions.length > 0
-    ) {
-      const currentQuestion = attemptData.questions[currentQuestionIndex];
-      if (currentQuestion) {
-        setQuestionStartTime(new Date());
-      }
-    }
-  }, [currentQuestionIndex, attemptData]);
+    if (!attemptData) return;
+
+    const byDiff: Pools = { easy: [], medium: [], hard: [] };
+    attemptData.questions.forEach((q) => {
+      if (q.difficulty === "EASY") byDiff.easy.push(q);
+      else if (q.difficulty === "HARD") byDiff.hard.push(q);
+      else byDiff.medium.push(q);
+    });
+
+    const first =
+      byDiff.medium.shift() ?? byDiff.easy.shift() ?? byDiff.hard.shift();
+
+    setPools(byDiff);
+    setSequence(first ? [first] : []);
+    setCurrentQuestionIndex(0);
+  }, [attemptData]);
+
+  const harderOf = (d: string) =>
+    d === "EASY" ? "MEDIUM" : d === "MEDIUM" ? "HARD" : "HARD";
+  const easierOf = (d: string) =>
+    d === "HARD" ? "MEDIUM" : d === "MEDIUM" ? "EASY" : "EASY";
 
   const isQuestionAnswered = (question: Question): boolean => {
     if (question.type === "OPEN_ENDED") {
@@ -68,7 +85,7 @@ const QuizAttempt = () => {
 
   const recordTimeForCurrentQuestion = () => {
     if (!attemptData) return;
-    const question = attemptData.questions[currentQuestionIndex];
+    const question = sequence[currentQuestionIndex];
     if (!questionStartTime) return;
 
     const duration = Math.round(
@@ -226,9 +243,7 @@ const QuizAttempt = () => {
   const handleAnswerSelect = async (questionId: number, answerId: number) => {
     if (sessionExpired) return;
 
-    const currentQuestion = attemptData?.questions.find(
-      (q) => q.id === questionId
-    );
+    const currentQuestion = sequence.find((q) => q.id === questionId);
     if (!currentQuestion) return;
 
     setSelectedAnswers((prev) => {
@@ -262,7 +277,7 @@ const QuizAttempt = () => {
   };
 
   const submitCurrentQuestionAnswers = async () => {
-    const question = attemptData?.questions[currentQuestionIndex];
+    const question = sequence[currentQuestionIndex];
     if (!question || !attemptId) return;
 
     setResponseSubmissionErrors((prev) => ({
@@ -294,7 +309,12 @@ const QuizAttempt = () => {
         isOpenEnded: question.type === "OPEN_ENDED",
       };
 
-      await quizAttemptService.submitAnswer(Number(attemptId), payload);
+      const { correct } = await quizAttemptService.submitAnswer(
+        Number(attemptId),
+        payload
+      );
+      console.log("API isCorrect: ", correct);
+      return correct;
     } catch (err) {
       const errorMessage = formatApiError(err);
       console.error(errorMessage);
@@ -309,15 +329,67 @@ const QuizAttempt = () => {
   const handleNextQuestion = async () => {
     if (sessionExpired) return;
 
-    await submitCurrentQuestionAnswers();
-
+    const correct = await submitCurrentQuestionAnswers();
     recordTimeForCurrentQuestion();
 
-    const nextIndex = currentQuestionIndex + 1;
-    if (nextIndex < (attemptData?.questions.length || 0)) {
-      setCurrentQuestionIndex(nextIndex);
-      setQuestionStartTime(new Date());
+    const currQ = sequence[currentQuestionIndex];
+
+    const nextStreakCorrect = correct ? streakCorrect + 1 : 0;
+    const nextStreakWrong = !correct ? streakWrong + 1 : 0;
+
+    let targetDiff = currQ.difficulty;
+    if (nextStreakCorrect >= 3) targetDiff = harderOf(currQ.difficulty);
+    if (nextStreakWrong >= 2) targetDiff = easierOf(currQ.difficulty);
+
+    setStreakCorrect(targetDiff === currQ.difficulty ? nextStreakCorrect : 0);
+    setStreakWrong(targetDiff === currQ.difficulty ? nextStreakWrong : 0);
+
+    const pull = (p: keyof Pools): Question | undefined => {
+      if (!pools[p].length) return undefined;
+      const [next, ...rest] = pools[p];
+      setPools((prev) => ({ ...prev, [p]: rest }));
+      return next;
+    };
+
+    let nextQ = pull(targetDiff.toLowerCase() as keyof Pools);
+    if (!nextQ) {
+      const fallback: (keyof Pools)[] =
+        targetDiff === "HARD"
+          ? ["medium", "easy"]
+          : targetDiff === "EASY"
+          ? ["medium", "hard"]
+          : ["easy", "hard"];
+      for (const bucket of fallback) {
+        nextQ = pull(bucket);
+        if (nextQ) break;
+      }
     }
+
+    if (!nextQ) {
+      setCurrentQuestionIndex(sequence.length - 1);
+      return;
+    }
+
+    setSequence((seq) => [...seq, nextQ]);
+    setCurrentQuestionIndex((idx) => idx + 1);
+    setQuestionStartTime(new Date());
+
+    console.log(
+      "picked",
+      selectedAnswers[currQ.id],
+      "correct",
+      correct,
+      "streak",
+      { nextStreakCorrect, nextStreakWrong },
+      "target →",
+      targetDiff,
+      "pools left",
+      {
+        easy: pools.easy.length,
+        medium: pools.medium.length,
+        hard: pools.hard.length,
+      }
+    );
   };
 
   const handlePreviousQuestion = () => {
@@ -341,9 +413,8 @@ const QuizAttempt = () => {
     await submitCurrentQuestionAnswers();
     recordTimeForCurrentQuestion();
 
-    const questions = attemptData?.questions || [];
-    const totalQuestions = questions.length;
-    const answeredQuestions = questions.filter((q) =>
+    const totalQuestions = sequence.length;
+    const answeredQuestions = sequence.filter((q) =>
       q.type === "OPEN_ENDED"
         ? textResponses[q.id]?.trim().length > 0
         : selectedAnswers[q.id]?.length > 0
@@ -373,7 +444,7 @@ const QuizAttempt = () => {
         }
       );
 
-      if (response && response.status === "SUBMITTED") {
+      if (response && ["SUBMITTED", "GRADED"].includes(response.status)) {
         navigate(`/student/quiz-results/${attemptId}`);
       } else {
         setError("Quiz submission failed. Please try again.");
@@ -490,7 +561,13 @@ const QuizAttempt = () => {
     );
   }
 
-  const currentQuestion = attemptData.questions[currentQuestionIndex];
+  if (!sequence.length || !sequence[currentQuestionIndex]) {
+    return <div className="text-center py-8">Building question sequence…</div>;
+  }
+
+  const currentQuestion = sequence[currentQuestionIndex];
+  const nothingLeft =
+    pools.easy.length + pools.medium.length + pools.hard.length === 0;
 
   return (
     <div className="container mx-auto p-4">
@@ -515,8 +592,7 @@ const QuizAttempt = () => {
         <div className="mb-4">
           <div className="flex justify-between text-sm text-gray-500 mb-1">
             <span>
-              Question {currentQuestionIndex + 1} of{" "}
-              {attemptData.questions.length}
+              Question {currentQuestionIndex + 1} of {sequence.length}
             </span>
             <span>{currentQuestion.difficulty}</span>
           </div>
@@ -525,8 +601,7 @@ const QuizAttempt = () => {
               className="bg-indigo-600 h-2.5 rounded-full"
               style={{
                 width: `${
-                  ((currentQuestionIndex + 1) / attemptData.questions.length) *
-                  100
+                  ((currentQuestionIndex + 1) / sequence.length) * 100
                 }%`,
               }}
             ></div>
@@ -631,16 +706,7 @@ const QuizAttempt = () => {
             Previous
           </button>
 
-          {currentQuestionIndex < attemptData.questions.length - 1 ? (
-            <button
-              type="button"
-              onClick={handleNextQuestion}
-              disabled={sessionExpired}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-            >
-              Next
-            </button>
-          ) : (
+          {nothingLeft && currentQuestionIndex === sequence.length - 1 ? (
             <button
               type="button"
               onClick={handleSubmitQuiz}
@@ -653,13 +719,22 @@ const QuizAttempt = () => {
                 ? "Session Expired"
                 : "Submit Quiz"}
             </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleNextQuestion}
+              disabled={sessionExpired}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+            >
+              Next
+            </button>
           )}
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-4">
         <div className="flex flex-wrap gap-2 justify-center">
-          {attemptData.questions.map((question, index) => (
+          {sequence.map((question, index) => (
             <button
               key={question.id}
               onClick={() => !sessionExpired && setCurrentQuestionIndex(index)}

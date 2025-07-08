@@ -9,6 +9,10 @@ export interface SubmitResponseRequest {
   isOpenEnded?: boolean;
 }
 
+export interface SubmitAnswerResponse {
+  correct: boolean;
+}
+
 export interface SubmitAttemptRequest {
   totalTime: number;
 }
@@ -16,6 +20,7 @@ export interface SubmitAttemptRequest {
 export interface Answer {
   id: number;
   text: string;
+  isCorrect: boolean;
 }
 
 export interface Question {
@@ -76,6 +81,9 @@ export interface AttemptResult {
       isCorrect: boolean;
     }>;
     isCorrect: boolean;
+    aiScore: number;
+    aiFeedback: string;
+    teacherScore: number;
   }>;
 }
 
@@ -111,7 +119,7 @@ export const quizAttemptService = {
   submitAnswer: async (
     attemptId: number,
     request: SubmitResponseRequest
-  ): Promise<void> => {
+  ): Promise<SubmitAnswerResponse> => {
     const response = await apiClient.post(
       `/attempts/${attemptId}/responses`,
       request

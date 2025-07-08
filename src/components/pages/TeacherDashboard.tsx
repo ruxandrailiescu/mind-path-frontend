@@ -9,6 +9,7 @@ import {
   TeacherDashboardStats,
   StudentProgress,
 } from "../../api/teacherDashboard";
+import dayjs from "dayjs";
 
 const TeacherDashboard = () => {
   const [activeTab, setActiveTab] = useState("quizzes");
@@ -279,6 +280,9 @@ const TeacherDashboard = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Last Active
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        View Results
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -296,7 +300,17 @@ const TeacherDashboard = () => {
                             : "N/A"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {student.lastActive}
+                          {dayjs(student.lastActive).format(
+                            "D MMM YYYY, HH:mm"
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <Link
+                            to={`/teacher/students/${student.studentId}`}
+                            className="text-indigo-600 hover:underline"
+                          >
+                            View results
+                          </Link>
                         </td>
                       </tr>
                     ))}

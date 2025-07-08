@@ -1,4 +1,5 @@
 import apiClient from "./apiClient";
+import { AttemptResult } from "./quizAttempt";
 
 export interface TeacherDashboardStats {
   activeStudentsCount: number;
@@ -23,5 +24,27 @@ export const teacherDashboardService = {
   getStudentProgress: async (): Promise<StudentProgress[]> => {
     const reponse = await apiClient.get("/teacher/dashboard/students");
     return reponse.data;
+  },
+};
+
+export const teacherGradingService = {
+  getStudentAttempts: async (studentId: number): Promise<AttemptResult[]> => {
+    const response = await apiClient.get(
+      `/teacher/students/${studentId}/attempts`
+    );
+    return response.data;
+  },
+
+  gradeAnswer: async (
+    attemptId: number,
+    questionId: number,
+    score: number
+  ): Promise<void> => {
+    const response = await apiClient.post(
+      `/teacher/attempts/${attemptId}/questions/${questionId}/grade`,
+      null,
+      { params: { score } }
+    );
+    return response.data;
   },
 };

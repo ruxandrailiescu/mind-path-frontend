@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { CheckCircle, XCircle, Clock, Award } from "lucide-react";
+import { CheckCircle, Clock, Award } from "lucide-react";
 import { quizAttemptService, AttemptResult } from "../../api/quizAttempt";
 import { AxiosError } from "axios";
 import { formatApiError } from "../../utils/validationUtils";
@@ -12,10 +12,6 @@ const QuizResults = () => {
   const [resultData, setResultData] = useState<AttemptResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const isOpenEndedQuestion = (questionType: string): boolean => {
-    return questionType === "OPEN_ENDED";
-  };
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -143,15 +139,10 @@ const QuizResults = () => {
                     <span className="text-gray-500">{index + 1}.</span>{" "}
                     {question.text}
                   </h3>
-                  {question.isCorrect ? (
-                    <CheckCircle size={20} className="text-green-600" />
-                  ) : (
-                    <XCircle size={20} className="text-red-600" />
-                  )}
                 </div>
 
                 <div className="ml-6">
-                  {isOpenEndedQuestion(question.type) ? (
+                  {question.type === "OPEN_ENDED" ? (
                     <div className="space-y-3">
                       <div className="bg-gray-50 border border-gray-300 rounded-md p-3">
                         <div className="flex justify-between items-start mb-2">
@@ -170,33 +161,45 @@ const QuizResults = () => {
                           ))}
                       </div>
 
-                      {question.answers
-                        .filter((answer) => answer.isCorrect && answer.id !== 0)
-                        .map((exampleAnswer) => (
-                          <div
-                            key={exampleAnswer.id}
-                            className="bg-green-50 border border-green-300 rounded-md p-3"
-                          >
-                            <h4 className="text-sm font-medium text-green-700 mb-2">
-                              Example Response:
-                            </h4>
-                            <div className="text-green-800">
-                              {exampleAnswer.text}
-                            </div>
-                          </div>
-                        ))}
+                      {question.aiScore !== null && (
+                        <div className="bg-indigo-50 border border-indigo-300 rounded-md p-3">
+                          <h4 className="text-sm font-medium text-indigo-700 mb-1">
+                            AI Evaluation
+                          </h4>
 
-                      <div
-                        className={`text-sm font-medium ${
-                          question.isCorrect
-                            ? "text-green-600"
-                            : "text-yellow-600"
-                        }`}
-                      >
-                        {question.isCorrect
-                          ? "Response evaluated as correct"
-                          : "Response pending evaluation"}
-                      </div>
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-bold text-indigo-700">
+                              {question.aiScore.toFixed(2)}
+                            </span>
+                            <span className="text-sm text-indigo-600">
+                              / 1.00
+                            </span>
+                          </div>
+
+                          {question.aiFeedback && (
+                            <p className="mt-2 text-sm text-indigo-800 whitespace-pre-line">
+                              {question.aiFeedback}
+                            </p>
+                          )}
+
+                          {question.teacherScore !== null &&
+                            question.teacherScore !== question.aiScore && (
+                              <div className="mt-4 pt-2 border-t border-indigo-200">
+                                <h5 className="text-sm font-medium text-indigo-700 mb-1">
+                                  Teacher Final Score
+                                </h5>
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-xl font-bold text-indigo-700">
+                                    {question.teacherScore.toFixed(2)}
+                                  </span>
+                                  <span className="text-sm text-indigo-600">
+                                    / 1.00
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-2">

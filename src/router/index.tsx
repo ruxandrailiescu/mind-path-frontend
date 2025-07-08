@@ -13,6 +13,8 @@ import QuizAccess from "../components/pages/QuizAccess";
 import QuizAttempt from "../components/pages/QuizAttempt";
 import QuizResults from "../components/pages/QuizResults";
 import QuizSession from "../components/pages/QuizSession";
+import StudentResults from "../components/pages/StudentResults";
+import GradeAttempt from "../components/pages/GradeAttempt";
 
 const router = createBrowserRouter([
   {
@@ -37,6 +39,22 @@ const router = createBrowserRouter([
             element: (
               <ProtectedRoute allowedRoles={["TEACHER"]}>
                 <CreateQuiz />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/teacher/students/:studentId",
+            element: (
+              <ProtectedRoute allowedRoles={["TEACHER"]}>
+                <StudentResults />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/teacher/grade/:attemptId",
+            element: (
+              <ProtectedRoute allowedRoles={["TEACHER"]}>
+                <GradeAttempt />
               </ProtectedRoute>
             ),
           },
@@ -91,7 +109,7 @@ const router = createBrowserRouter([
           {
             path: "student/quiz-results/:attemptId",
             element: (
-              <ProtectedRoute allowedRoles={["STUDENT"]}>
+              <ProtectedRoute allowedRoles={["STUDENT", "TEACHER"]}>
                 <QuizResults />
               </ProtectedRoute>
             ),
