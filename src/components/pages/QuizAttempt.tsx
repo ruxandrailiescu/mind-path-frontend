@@ -27,9 +27,6 @@ const QuizAttempt = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<Date | null>(null);
-  const [questionDurations, setQuestionDurations] = useState<
-    Record<number, number>
-  >({});
   const [sessionExpired, setSessionExpired] = useState(false);
 
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -66,6 +63,7 @@ const QuizAttempt = () => {
     setPools(byDiff);
     setSequence(first ? [first] : []);
     setCurrentQuestionIndex(0);
+    setQuestionStartTime(new Date());
   }, [attemptData]);
 
   const harderOf = (d: string) =>
@@ -81,21 +79,6 @@ const QuizAttempt = () => {
       const selections = selectedAnswers[question.id];
       return selections != null && selections.length > 0;
     }
-  };
-
-  const recordTimeForCurrentQuestion = () => {
-    if (!attemptData) return;
-    const question = sequence[currentQuestionIndex];
-    if (!questionStartTime) return;
-
-    const duration = Math.round(
-      (new Date().getTime() - questionStartTime.getTime()) / 1000
-    );
-
-    setQuestionDurations((prev) => ({
-      ...prev,
-      [question.id]: (prev[question.id] || 0) + duration,
-    }));
   };
 
   const determineResumeQuestionIndex = (
@@ -294,6 +277,11 @@ const QuizAttempt = () => {
     }
 
     try {
+      const now = Date.now();
+      const duration = questionStartTime
+        ? Math.round((now - questionStartTime.getTime()) / 1000)
+        : 0;
+
       const payload: SubmitResponseRequest = {
         questionId: question.id,
         selectedAnswerIds:
@@ -304,8 +292,8 @@ const QuizAttempt = () => {
           question.type === "OPEN_ENDED"
             ? textResponses[question.id]
             : undefined,
-        responseTime: questionDurations[question.id] || 0,
         isMultipleChoice: question.type === "MULTIPLE_CHOICE",
+        responseTime: duration,
         isOpenEnded: question.type === "OPEN_ENDED",
       };
 
@@ -313,7 +301,7 @@ const QuizAttempt = () => {
         Number(attemptId),
         payload
       );
-      console.log("API isCorrect: ", correct);
+      setQuestionStartTime(new Date());
       return correct;
     } catch (err) {
       const errorMessage = formatApiError(err);
@@ -330,7 +318,6 @@ const QuizAttempt = () => {
     if (sessionExpired) return;
 
     const correct = await submitCurrentQuestionAnswers();
-    recordTimeForCurrentQuestion();
 
     const currQ = sequence[currentQuestionIndex];
 
@@ -395,8 +382,6 @@ const QuizAttempt = () => {
   const handlePreviousQuestion = () => {
     if (sessionExpired) return;
 
-    recordTimeForCurrentQuestion();
-
     const prevIndex = currentQuestionIndex - 1;
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prevIndex);
@@ -411,7 +396,6 @@ const QuizAttempt = () => {
     }
 
     await submitCurrentQuestionAnswers();
-    recordTimeForCurrentQuestion();
 
     const totalQuestions = sequence.length;
     const answeredQuestions = sequence.filter((q) =>
@@ -475,7 +459,6 @@ const QuizAttempt = () => {
     }
 
     await submitCurrentQuestionAnswers();
-    recordTimeForCurrentQuestion();
 
     try {
       setIsSaving(true);
