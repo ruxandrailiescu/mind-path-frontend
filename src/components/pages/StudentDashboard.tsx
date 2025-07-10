@@ -6,6 +6,7 @@ import {
   RefreshCw,
   PlayCircle,
   CheckCircle,
+  BarChart2,
 } from "lucide-react";
 import { quizService } from "../../api/quiz";
 import {
@@ -115,6 +116,16 @@ const StudentDashboard = () => {
 
   return (
     <div className="container mx-auto p-4">
+      <div className="flex justify-end mb-6">
+        <Link
+          to="/student/weakness-report"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+        >
+          <BarChart2 size={18} />
+          Weakness Report
+        </Link>
+      </div>
+
       {inProgressAttempts.length > 0 && (
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-4">Continue Your Progress</h1>

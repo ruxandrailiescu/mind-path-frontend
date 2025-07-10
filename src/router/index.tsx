@@ -15,6 +15,7 @@ import QuizResults from "../components/pages/QuizResults";
 import QuizSession from "../components/pages/QuizSession";
 import StudentResults from "../components/pages/StudentResults";
 import GradeAttempt from "../components/pages/GradeAttempt";
+import WeaknessReportPage from "../components/pages/WeaknessReport";
 
 const router = createBrowserRouter([
   {
@@ -119,6 +120,14 @@ const router = createBrowserRouter([
             element: (
               <ProtectedRoute allowedRoles={["STUDENT"]}>
                 <QuizSession />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/student/weakness-report",
+            element: (
+              <ProtectedRoute allowedRoles={["STUDENT"]}>
+                <WeaknessReportPage />
               </ProtectedRoute>
             ),
           },
